@@ -48,21 +48,36 @@ final class TunnelManager: ObservableObject {
 
     func startTunneld() {
         let (path, args) = tunneldCommand()
-        let quotedArgs = args.map { "'\($0)'" }.joined(separator: " ")
+        let quotedArgs = args.map { Self.shellQuote($0) }.joined(separator: " ")
         // Fully detach the daemon so it survives the privileged osascript session
         // ending. `nohup` fails here ("can't detach from console" — no tty), and
         // a plain `&` child can be reaped with the session, so we use perl's
         // setsid to start a brand-new session, then exec the daemon. Output goes
         // to a log file; `&` returns control to osascript immediately.
         let inner = "/usr/bin/perl -MPOSIX -e 'setsid or exit 1; exec @ARGV' "
-            + "'\(path)' \(quotedArgs)"
+            + "\(Self.shellQuote(path)) \(quotedArgs)"
         let shell = "\(inner) </dev/null >\(Self.logPath) 2>&1 &"
-        let escaped = shell.replacingOccurrences(of: "\"", with: "\\\"")
+        // Escape for embedding inside an AppleScript "do shell script" string:
+        // backslashes first, then double quotes.
+        let escaped = shell
+            .replacingOccurrences(of: "\\", with: "\\\\")
+            .replacingOccurrences(of: "\"", with: "\\\"")
         let script = "do shell script \"\(escaped)\" with administrator privileges"
 
         let proc = Process()
         proc.executableURL = URL(fileURLWithPath: "/usr/bin/osascript")
         proc.arguments = ["-e", script]
         try? proc.run()
+    }
+
+    /// Quote a string for safe use as a shell argument (POSIX single-quote style).
+    /// Wraps in single quotes and escapes any embedded single quotes as `'\''`.
+    private static func shellQuote(_ s: String) -> String {
+        let escaped = s.replacingOccurrences(of: "'", with: "'\\''")
+        return "'\(escaped)'"
+    }
+
+    deinit {
+        pollTimer?.invalidate()
     }
 }

@@ -24,15 +24,26 @@ struct MapView: NSViewRepresentable {
         map.isScrollEnabled = true
         map.isRotateEnabled = true
         map.isPitchEnabled = true
-        // Single-click drops a waypoint; require exactly one click so it doesn't
-        // swallow the map's own double-click-to-zoom or drag-to-pan.
+        // Single-click drops a waypoint. We add a double-click recognizer and
+        // make the single-click require it to fail, so that double-click-to-zoom
+        // (handled by MapKit internally) does NOT also drop a waypoint.
         let click = NSClickGestureRecognizer(
             target: context.coordinator,
             action: #selector(Coordinator.handleClick(_:))
         )
         click.numberOfClicksRequired = 1
         click.delaysPrimaryMouseButtonEvents = false
+
+        let doubleClick = NSClickGestureRecognizer(
+            target: context.coordinator,
+            action: #selector(Coordinator.handleDoubleClick(_:))
+        )
+        doubleClick.numberOfClicksRequired = 2
+        doubleClick.delaysPrimaryMouseButtonEvents = false
+        click.shouldRequireFailure(of: doubleClick)
+
         map.addGestureRecognizer(click)
+        map.addGestureRecognizer(doubleClick)
         context.coordinator.mapView = map
         context.coordinator.bindController()
         // Default region: roughly continental view until the user picks a spot.
@@ -93,6 +104,9 @@ struct MapView: NSViewRepresentable {
             let coord = map.convert(point, toCoordinateFrom: map)
             parent.onTap(coord)
         }
+
+        /// No-op: lets MapKit's built-in double-click-to-zoom handle the gesture.
+        @objc func handleDoubleClick(_ gr: NSClickGestureRecognizer) {}
 
         func sync(waypoints: [Waypoint], current: CLLocationCoordinate2D?) {
             guard let map = mapView else { return }

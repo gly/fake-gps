@@ -182,7 +182,10 @@ async def run(address: tuple[str, int], udid: Optional[str]) -> int:
                     emit({"event": "devices", "devices": [describe(d) for d in devs]})
                     for d in devs:
                         if d.udid != rsd.udid:
-                            await d.close()
+                            try:
+                                await d.close()
+                            except Exception:
+                                pass
                 elif cmd == "quit":
                     break
                 else:

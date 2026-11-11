@@ -108,11 +108,17 @@ final class Sidecar: ObservableObject {
     func stop() {
         if let proc = process, proc.isRunning {
             // Reset the device to real GPS first, then ask the helper to quit.
-            // Don't SIGTERM immediately — that races the clear. Close stdin so it
-            // exits cleanly, and force-kill only if it lingers.
-            send(["cmd": "clear"])
+            // Don't SIGTERM immediately — that races the clear.
+            let sentClear = send(["cmd": "clear"])
             send(["cmd": "quit"])
-            try? stdinPipe?.fileHandleForWriting.close()
+            // Delay closing stdin so the sidecar has time to read the clear command.
+            // If we close the pipe immediately, the sidecar may not have read the
+            // commands yet, leaving the device at the fake location.
+            let pipeToClose = stdinPipe
+            let closeDelay: Double = sentClear ? 0.15 : 0
+            DispatchQueue.global().asyncAfter(deadline: .now() + closeDelay) {
+                try? pipeToClose?.fileHandleForWriting.close()
+            }
             DispatchQueue.global().asyncAfter(deadline: .now() + 2) {
                 if proc.isRunning { proc.terminate() }
             }
@@ -124,8 +130,11 @@ final class Sidecar: ObservableObject {
     /// (bounded) for the helper to exit, so quitting always restores real GPS.
     func shutdownBlocking() {
         guard let proc = process, proc.isRunning else { return }
-        send(["cmd": "clear"])
+        let sentClear = send(["cmd": "clear"])
         send(["cmd": "quit"])
+        // Give the sidecar a moment to process the clear command before closing
+        // the pipe, so the device location is actually restored.
+        if sentClear { usleep(150_000) }
         try? stdinPipe?.fileHandleForWriting.close()
         let deadline = Date().addingTimeInterval(2)
         while proc.isRunning && Date() < deadline { usleep(50_000) }
@@ -137,8 +146,9 @@ final class Sidecar: ObservableObject {
         process = nil
         stdinPipe = nil
         stdoutBuffer.removeAll()
-        if case .ready = state { state = .stopped }
-        if case .launching = state { state = .stopped }
+        // Reset any non-stopped state back to stopped so the UI always returns
+        // to a clean state after disconnect / stop.
+        if state != .stopped { state = .stopped }
     }
 
     private func handleTermination() {
@@ -161,12 +171,17 @@ final class Sidecar: ObservableObject {
         send(["cmd": "clear", "id": messageID])
     }
 
-    private func send(_ obj: [String: Any]) {
+    /// Send a JSON command to the sidecar over stdin. Returns `true` if the
+    /// message was actually written, `false` if the process/pipe is gone.
+    @discardableResult
+    private func send(_ obj: [String: Any]) -> Bool {
         guard let pipe = stdinPipe,
-              let data = try? JSONSerialization.data(withJSONObject: obj) else { return }
+              let data = try? JSONSerialization.data(withJSONObject: obj),
+              process?.isRunning == true else { return false }
         var line = data
         line.append(0x0A) // newline
         pipe.fileHandleForWriting.write(line)
+        return true
     }
 
     // MARK: - Incoming NDJSON

@@ -44,6 +44,10 @@ final class SimulationEngine: ObservableObject {
         self.sidecar = sidecar
     }
 
+    deinit {
+        timer?.invalidate()
+    }
+
     var coordinates: [CLLocationCoordinate2D] { waypoints.map(\.coordinate) }
     var totalDistance: Double { Geo.pathLength(coordinates) }
 

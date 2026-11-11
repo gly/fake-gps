@@ -43,7 +43,14 @@ def main() -> int:
             return out
 
         try:
-            devices = asyncio.run(_list())
+            # Use an explicit event loop instead of asyncio.run() to avoid
+            # "cannot be called from a running event loop" if this function is
+            # ever invoked from an async context.
+            loop = asyncio.new_event_loop()
+            try:
+                devices = loop.run_until_complete(_list())
+            finally:
+                loop.close()
             print(json.dumps({"devices": devices}))
         except Exception as e:  # noqa: BLE001
             print(json.dumps({"devices": [], "error": str(e)}))

@@ -59,12 +59,16 @@ enum Geo {
         var remaining = s
         for i in 0 ..< (points.count - 1) {
             let segLen = distance(points[i], points[i + 1])
-            if remaining <= segLen || i == points.count - 2 {
-                let t = segLen == 0 ? 0 : min(1, remaining / segLen)
-                return interpolate(points[i], points[i + 1], t)
+            if segLen == 0 {
+                // Skip zero-length segments (duplicate waypoints).
+                continue
+            }
+            if remaining <= segLen {
+                return interpolate(points[i], points[i + 1], remaining / segLen)
             }
             remaining -= segLen
         }
+        // Past the end — clamp to the last point.
         return points.last
     }
 
