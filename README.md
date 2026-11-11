@@ -42,7 +42,9 @@ Apple 的**开发者隧道**（developer tunnel）从连接的 Mac 端驱动定�
 ## 快速开始
 
 1. 从 [**Releases**](https://github.com/orestislef/ios-fake-gps/releases) 页面
-   下载最新的 **FakeGPS-macos-arm64.zip** 并解压。
+   下载对应你 Mac 芯片的 zip 并解压：
+   - **FakeGPS-macos-arm64.zip** —— M 系列芯片（M1/M2/M3/M4）
+   - **FakeGPS-macos-x86_64.zip** —— Intel 芯片
 2. 把 **FakeGPS.app** 拖进**应用程序（Applications）**文件夹。
 3. 仅首次启动需要：macOS 会提示"来自身份不明的开发者"（应用未经公证）。
    **右键点击应用 → 打开**并确认。如果仍然无法打开，运行一次：
@@ -97,7 +99,7 @@ macOS 应用 (SwiftUI + MapKit)             内置引擎                    iPho
 
 ## 系统要求
 
-- **Apple silicon** 芯片的 Mac（预构建应用为 `arm64`；已在 M1 和 M4 上测试）。
+- Mac（Apple silicon 或 Intel），macOS 14 或更新版本。
 - **iOS 17 或更新版本**的 iPhone，配有 USB 数据线并开启**开发者模式**。
 
 ## 开发者 —— 从源码构建
@@ -161,6 +163,22 @@ cd macapp && swift run        # 或在 Xcode 中打开 macapp/Package.swift 后�
 ```bash
 xattr -dr com.apple.quarantine /Applications/FakeGPS.app
 ```
+
+### 分架构打包（支持 Intel）
+
+本机打包只能产出当前架构的包：M 系列机器出 arm64，Intel 机器出 x86_64
+（`build_app.sh` 自动按 `uname -m` 命名产物）。由于 PyInstaller 不支持
+交叉编译，Intel 包必须在 Intel 机器上构建。仓库内置了
+[GitHub Actions workflow](.github/workflows/build.yml)，会在两种架构的
+云构建机上各打一个包：
+
+- `macos-14`（Apple silicon）→ `FakeGPS-macos-arm64.zip`
+- `macos-13`（Intel）→ `FakeGPS-macos-x86_64.zip`
+
+手动触发（workflow_dispatch）或推送 `v*` 标签即可，产物在 Actions Artifacts。
+
+> **注意：** Gitee 没有免费的 macOS 云构建机。若仓库托管在 Gitee，
+> 可将仓库镜像到 GitHub 后使用该 workflow，或在 Intel Mac 上手动打包。
 
 ### 重新生成图标
 
