@@ -1,3 +1,4 @@
+import AppKit
 import CoreLocation
 import MapKit
 import SwiftUI
@@ -33,6 +34,18 @@ struct ContentView: View {
             }
         }
         .animation(.easeInOut(duration: 0.2), value: sidecar.state.isReady)
+        .onChange(of: searchFocused) { _, focused in
+            // 从其它应用切回来点击搜索框时，系统可能并未真正激活本应用
+            // （macOS 14+ 协作激活会拒绝后台应用的立即激活请求），
+            // 光标显示了但键盘事件仍发给之前的应用。
+            // 立即激活一次，稍等片刻再补一次，确保键盘路由到本窗口。
+            if focused {
+                NSApp.activate(ignoringOtherApps: true)
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+                    NSApp.activate(ignoringOtherApps: true)
+                }
+            }
+        }
     }
 
     private var mapArea: some View {

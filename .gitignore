@@ -1,0 +1,13 @@
+# macOS
+.DS_Store
+
+# Swift 构建产物
+macapp/.build/
+*.xcodeproj/xcuserdata/
+
+# PyInstaller 构建产物（冻结的 Python 引擎）
+build_pyi/
+dist_pyi/
+
+# 打包输出的应用和 zip（通过 GitHub Releases 分发，不进 git）
+dist/

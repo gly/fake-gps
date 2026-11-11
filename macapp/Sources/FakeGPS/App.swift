@@ -10,6 +10,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         true
     }
 
+    func applicationDidFinishLaunching(_ notification: Notification) {
+        // 从终端后台启动时系统不会自动把应用带到前台，主动激活一次。
+        NSApp.activate(ignoringOtherApps: true)
+
+        // macOS 14+ 引入"协作激活"：点击后台应用的窗口可能只抬升窗口
+        // 而不激活应用，键盘事件仍发给之前活跃的应用。监听鼠标按下，
+        // 异步强制完成激活（立即调用会被系统拒绝，需等下一个 runloop）。
+        NSEvent.addLocalMonitorForEvents(matching: [.leftMouseDown]) { event in
+            if !NSApp.isActive {
+                DispatchQueue.main.async {
+                    NSApp.activate(ignoringOtherApps: true)
+                }
+            }
+            return event
+        }
+    }
+
     func applicationWillTerminate(_ notification: Notification) {
         onTerminate?()
     }
