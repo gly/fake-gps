@@ -3,6 +3,22 @@
 All notable changes to this project are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.4.0] - 2026-11-11
+
+### Added
+- 分架构打包：GitHub Actions 分别在 Apple silicon 与 Intel runner 上构建
+  `FakeGPS-macos-arm64.zip` / `FakeGPS-macos-x86_64.zip`，推送 `v*` 标签时
+  自动创建 Release 并上传产物。
+- 新的项目 logo。
+
+### Changed
+- 交互重构：地图只负责选点，新增「立即更新」按钮，并记住上次使用的位置。
+- README 精简为项目简介与下载入口。
+
+### Fixed
+- 修复地址搜索框的输入焦点问题。
+- 修复已退役的 `macos-14` runner 标签导致的 CI 失败。
+
 ## [0.3.0] - 2026-06-16
 
 ### Added
@@ -37,6 +53,7 @@ All notable changes to this project are documented here. The format is based on
   bundled inside the app — no Python install required.
 - One-click tunnel daemon launch and packaged, double-clickable `FakeGPS.app`.
 
+[0.4.0]: https://github.com/gly/fake-gps/releases/tag/v0.4.0
 [0.3.0]: https://github.com/orestislef/ios-fake-gps/releases/tag/v0.3.0
 [0.2.0]: https://github.com/orestislef/ios-fake-gps/releases/tag/v0.2.0
 [0.1.0]: https://github.com/orestislef/ios-fake-gps/releases/tag/v0.1.0

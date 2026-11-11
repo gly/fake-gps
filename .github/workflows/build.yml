@@ -2,7 +2,8 @@
 #
 # PyInstaller 不支持交叉编译，所以引擎必须在对应架构的机器上冻结。
 # 触发方式：手动（workflow_dispatch）或推送 v* 标签。
-# 产物：FakeGPS-macos-arm64.zip / FakeGPS-macos-x86_64.zip（Actions Artifacts）。
+# 产物：FakeGPS-macos-arm64.zip / FakeGPS-macos-x86_64.zip（Actions Artifacts）；
+# 推送 v* 标签时还会自动创建 Release 并上传这两个 zip。
 #
 # 说明：GitHub 已退役 macos-13/14 标签；Apple silicon 用 macos-15，
 # Intel 用 macos-15-intel（GitHub 提供的最后一代 Intel 机器）。
@@ -50,3 +51,22 @@ jobs:
           name: FakeGPS-macos-${{ matrix.arch }}
           path: dist/FakeGPS-macos-*.zip
           if-no-files-found: error
+
+  release:
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: FakeGPS-macos-*
+          path: dist
+          merge-multiple: true
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          name: FakeGPS ${{ github.ref_name }}
+          files: dist/FakeGPS-macos-*.zip
+          generate_release_notes: true
