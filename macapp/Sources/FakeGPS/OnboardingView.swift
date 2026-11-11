@@ -24,41 +24,41 @@ struct OnboardingView: View {
             VStack(alignment: .leading, spacing: 14) {
                 step(
                     n: 1, done: engineReady,
-                    title: "Engine ready",
+                    title: "引擎就绪",
                     detail: engineReady
-                        ? "Everything needed is bundled inside the app."
-                        : "Runtime missing at \(config.locationDescription)."
+                        ? "所需的一切都已内置在应用中。"
+                        : "运行时缺失：\(config.locationDescription)。"
                 )
                 step(
                     n: 2, done: deviceReady,
-                    title: deviceReady ? "iPhone detected" : "Connect your iPhone",
+                    title: deviceReady ? "已检测到 iPhone" : "连接你的 iPhone",
                     detail: deviceReady
-                        ? "Found a connected device."
-                        : "Plug it in with a USB cable and tap Trust. Turn on Developer Mode in Settings ▸ Privacy & Security ▸ Developer Mode."
+                        ? "已发现连接的设备。"
+                        : "用 USB 数据线连接手机并点按「信任」，然后在 设置 ▸ 隐私与安全性 ▸ 开发者模式 中打开开发者模式。"
                 ) {
                     if !deviceReady {
                         HStack(spacing: 6) {
                             ProgressView().controlSize(.small)
-                            Text("Waiting for a device…").font(.caption).foregroundStyle(.secondary)
+                            Text("等待设备接入…").font(.caption).foregroundStyle(.secondary)
                         }
                     }
                 }
                 step(
                     n: 3, done: tunnelReady,
-                    title: "Start the secure tunnel",
+                    title: "启动安全隧道",
                     detail: tunnelReady
-                        ? "Tunnel daemon is running."
-                        : "Opens a developer tunnel to the device. Asks for your password once."
+                        ? "隧道守护进程正在运行。"
+                        : "向设备建立开发者隧道，需要输入一次密码。"
                 ) {
                     if !tunnelReady {
-                        Button("Start tunnel (admin)…") { tunnel.startTunneld() }
+                        Button("启动隧道（需要管理员）…") { tunnel.startTunneld() }
                             .disabled(!engineReady)
                     }
                 }
                 step(
                     n: 4, done: false, isFinal: true,
-                    title: "Connect",
-                    detail: "Link the app to your device and start spoofing."
+                    title: "连接",
+                    detail: "将应用与设备链接，即可开始模拟定位。"
                 ) {
                     connectControl
                 }
@@ -77,8 +77,8 @@ struct OnboardingView: View {
                 .font(.system(size: 30))
                 .foregroundStyle(.tint)
             VStack(alignment: .leading, spacing: 2) {
-                Text("Set up iOS Fake GPS").font(.title3.bold())
-                Text("A few quick steps and you're ready.").font(.caption).foregroundStyle(.secondary)
+                Text("设置 iOS Fake GPS").font(.title3.bold())
+                Text("几步简单操作即可开始。").font(.caption).foregroundStyle(.secondary)
             }
             Spacer()
         }
@@ -89,15 +89,15 @@ struct OnboardingView: View {
     private var connectControl: some View {
         switch sidecar.state {
         case .launching:
-            HStack(spacing: 6) { ProgressView().controlSize(.small); Text("Connecting…") }
+            HStack(spacing: 6) { ProgressView().controlSize(.small); Text("连接中…") }
         case let .failed(msg):
             VStack(alignment: .leading, spacing: 6) {
                 Text(msg).font(.caption).foregroundStyle(.red)
                     .fixedSize(horizontal: false, vertical: true)
-                Button("Try again") { sidecar.start() }.disabled(!canConnect)
+                Button("重试") { sidecar.start() }.disabled(!canConnect)
             }
         default:
-            Button("Connect") { sidecar.start() }
+            Button("连接") { sidecar.start() }
                 .buttonStyle(.borderedProminent)
                 .disabled(!canConnect)
         }

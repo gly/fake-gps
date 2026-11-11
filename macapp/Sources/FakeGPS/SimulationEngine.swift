@@ -29,6 +29,10 @@ final class SimulationEngine: ObservableObject {
     @Published var speedKmh: Double = 50      // target ground speed
     @Published var loop: Bool = false
     @Published var jitterMetres: Double = 0   // 0 = perfectly smooth
+    /// 开启后，每次传送会在选中位置 100 米范围内随机取一个点。
+    @Published var randomOffset: Bool = false
+    /// 随机偏移半径（米）。
+    static let randomRadiusMetres: Double = 100
 
     @Published private(set) var playback: PlaybackState = .idle
     @Published private(set) var currentCoordinate: CLLocationCoordinate2D?
@@ -68,8 +72,12 @@ final class SimulationEngine: ObservableObject {
 
     func teleport(to c: CLLocationCoordinate2D) {
         guard sidecar.state.isReady else { return }
-        currentCoordinate = c
-        sidecar.setLocation(c.latitude, c.longitude)
+        // 开启随机偏移时，在选中点周围 100 米内随机取点（圆内均匀分布）。
+        let target = randomOffset
+            ? Geo.randomOffset(c, radius: Self.randomRadiusMetres)
+            : c
+        currentCoordinate = target
+        sidecar.setLocation(target.latitude, target.longitude)
     }
 
     // MARK: - Route playback

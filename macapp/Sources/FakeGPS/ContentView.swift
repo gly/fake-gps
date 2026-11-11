@@ -2,21 +2,16 @@ import CoreLocation
 import MapKit
 import SwiftUI
 
-enum EditMode: String, CaseIterable, Identifiable {
-    case teleport = "Teleport"
-    case route = "Route"
-    var id: String { rawValue }
-}
-
 struct ContentView: View {
     @EnvironmentObject var config: AppConfig
     @EnvironmentObject var sidecar: Sidecar
     @EnvironmentObject var engine: SimulationEngine
     @EnvironmentObject var tunnel: TunnelManager
 
-    @State private var mode: EditMode = .route
     @StateObject private var mapController = MapController()
     @StateObject private var search = PlaceSearch()
+    /// 搜索框焦点：点击地图等其它区域时置为 false 取消聚焦。
+    @FocusState private var searchFocused: Bool
 
     var body: some View {
         HSplitView {
@@ -29,7 +24,9 @@ struct ContentView: View {
         .overlay {
             if !sidecar.state.isReady {
                 ZStack {
+                    // 遮罩只是视觉效果，必须允许点击穿透，否则会挡住地图和搜索框。
                     Rectangle().fill(.black.opacity(0.25)).ignoresSafeArea()
+                        .allowsHitTesting(false)
                     OnboardingView()
                 }
                 .transition(.opacity)
@@ -46,16 +43,36 @@ struct ContentView: View {
             onTap: handleTap
         )
         .overlay(alignment: .top) { searchOverlay }
+        .overlay(alignment: .bottomTrailing) { locateButton }
     }
 
-    // MARK: - Search overlay
+    /// 地图右下角的「回到当前位置」按钮。
+    private var locateButton: some View {
+        Button {
+            searchFocused = false  // 点击地图区域 = 取消搜索聚焦
+            mapController.locateCurrentLocation()
+        } label: {
+            Image(systemName: "location.fill")
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundStyle(.primary)
+                .frame(width: 32, height: 32)
+        }
+        .buttonStyle(.plain)
+        .background(.regularMaterial, in: Circle())
+        .overlay(Circle().strokeBorder(.quaternary))
+        .padding(12)
+        .help("定位到当前位置")
+    }
+
+    // MARK: - 搜索栏
 
     private var searchOverlay: some View {
         VStack(spacing: 0) {
             HStack(spacing: 6) {
                 Image(systemName: "magnifyingglass").foregroundStyle(.secondary)
-                TextField("Search address or place…", text: $search.query)
+                TextField("搜索地址或地点…", text: $search.query)
                     .textFieldStyle(.plain)
+                    .focused($searchFocused)
                     .onSubmit { search.run(near: mapController.currentCenter?()) }
                     .onChange(of: search.query) { _, _ in search.run(near: mapController.currentCenter?()) }
                 if search.isSearching {
@@ -96,10 +113,8 @@ struct ContentView: View {
     private func choose(_ item: MKMapItem) {
         let coord = item.coordinate
         mapController.center(on: coord, meters: 1_200)
-        switch mode {
-        case .teleport: engine.teleport(to: coord)
-        case .route: engine.addWaypoint(coord)
-        }
+        engine.teleport(to: coord)
+        searchFocused = false  // 选中结果后取消聚焦
         search.clear()
     }
 
@@ -110,8 +125,7 @@ struct ContentView: View {
             VStack(alignment: .leading, spacing: 18) {
                 connectionSection
                 Divider()
-                modeSection
-                if mode == .route { routeSection }
+                teleportSection
                 Divider()
                 statusFooter
             }
@@ -121,119 +135,67 @@ struct ContentView: View {
 
     private var connectionSection: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("Device").font(.headline)
+            Text("设备").font(.headline)
 
             statusRow(
                 ok: tunnel.isUp,
-                label: tunnel.isUp ? "Tunnel daemon running" : "Tunnel daemon not running"
+                label: tunnel.isUp ? "隧道守护进程运行中" : "隧道守护进程未运行"
             )
             if !tunnel.isUp {
-                Button("Start tunnel (admin)…") { tunnel.startTunneld() }
-                Text("Needs your password. Keep the iPhone plugged in with Developer Mode on.")
+                Button("启动隧道（需要管理员）…") { tunnel.startTunneld() }
+                Text("需要输入你的密码。请保持 iPhone 已连接并开启开发者模式。")
                     .font(.caption).foregroundStyle(.secondary)
             }
 
             switch sidecar.state {
             case .stopped:
-                Button("Connect") { sidecar.start() }
+                Button("连接") { sidecar.start() }
                     .disabled(!tunnel.isUp || !config.isValid)
             case .launching:
-                HStack { ProgressView().controlSize(.small); Text("Connecting…") }
+                HStack { ProgressView().controlSize(.small); Text("连接中…") }
             case let .ready(dev):
                 statusRow(ok: true, label: dev.display)
-                Button("Disconnect") { engine.stop(); sidecar.stop() }
+                Button("断开连接") { engine.stop(); sidecar.stop() }
             case let .failed(msg):
-                statusRow(ok: false, label: "Failed")
+                statusRow(ok: false, label: "连接失败")
                 Text(msg).font(.caption).foregroundStyle(.red).fixedSize(horizontal: false, vertical: true)
-                Button("Retry") { sidecar.start() }.disabled(!tunnel.isUp)
+                Button("重试") { sidecar.start() }.disabled(!tunnel.isUp)
             }
 
             if !config.isValid {
-                Text("Runtime not found at \(config.locationDescription)")
+                Text("未找到运行时：\(config.locationDescription)")
                     .font(.caption).foregroundStyle(.orange)
             }
         }
     }
 
-    private var modeSection: some View {
+    private var teleportSection: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Picker("Mode", selection: $mode) {
-                ForEach(EditMode.allCases) { Text($0.rawValue).tag($0) }
-            }
-            .pickerStyle(.segmented)
+            Text("传送").font(.headline)
 
-            Text(mode == .teleport
-                 ? "Click the map to jump the device to that point."
-                 : "Click the map to add route points. Then press play.")
+            Text("点击地图或搜索地址，将设备瞬间传送到该位置。")
                 .font(.caption).foregroundStyle(.secondary)
-        }
-    }
 
-    private var routeSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Text("Speed").frame(width: 54, alignment: .leading)
-                Slider(value: $engine.speedKmh, in: 1 ... 300)
-                Text("\(Int(engine.speedKmh)) km/h").monospacedDigit().frame(width: 70, alignment: .trailing)
-            }
+            Toggle("选中位置 100 米内随机", isOn: $engine.randomOffset)
 
-            HStack {
-                Text("Jitter").frame(width: 54, alignment: .leading)
-                Slider(value: $engine.jitterMetres, in: 0 ... 20)
-                Text("\(Int(engine.jitterMetres)) m").monospacedDigit().frame(width: 70, alignment: .trailing)
-            }
-
-            Toggle("Loop route", isOn: $engine.loop)
-
-            // Transport controls
-            HStack(spacing: 10) {
-                switch engine.playback {
-                case .idle:
-                    Button { engine.play() } label: { Label("Play", systemImage: "play.fill") }
-                        .disabled(!canPlay)
-                case .playing:
-                    Button { engine.pause() } label: { Label("Pause", systemImage: "pause.fill") }
-                case .paused:
-                    Button { engine.play() } label: { Label("Resume", systemImage: "play.fill") }
-                }
-                Button { engine.stop() } label: { Label("Stop", systemImage: "stop.fill") }
-                    .disabled(engine.playback == .idle)
-                Spacer()
-                Button(role: .destructive) { engine.clearRoute() } label: {
-                    Label("Clear", systemImage: "trash")
-                }
-                .disabled(engine.waypoints.isEmpty)
-            }
-
-            if engine.playback != .idle {
-                ProgressView(value: engine.progress)
-            }
-
-            routeStats
-        }
-    }
-
-    private var routeStats: some View {
-        VStack(alignment: .leading, spacing: 3) {
-            Text("\(engine.waypoints.count) points · \(formatDistance(engine.totalDistance))")
-            if engine.totalDistance > 0 {
-                Text("ETA \(formatDuration(engine.estimatedDurationSeconds)) at \(Int(engine.speedKmh)) km/h")
+            if engine.randomOffset {
+                Text("已开启：每次传送会在选中位置 100 米范围内随机取一个点。")
+                    .font(.caption).foregroundStyle(.secondary)
             }
         }
-        .font(.caption).foregroundStyle(.secondary)
     }
 
     private var statusFooter: some View {
         VStack(alignment: .leading, spacing: 4) {
             if let c = engine.currentCoordinate {
-                Text(String(format: "Now: %.6f, %.6f", c.latitude, c.longitude))
+                Text(String(format: "当前：%.6f, %.6f", c.latitude, c.longitude))
                     .font(.caption.monospaced())
             }
             if let err = sidecar.lastError, !sidecar.state.isFailed {
                 Text(err).font(.caption).foregroundStyle(.orange)
             }
             if sidecar.state.isReady {
-                Button("Reset device location") { sidecar.clearLocation(); engine.stop() }
+                Button("重置设备位置") { sidecar.clearLocation(); engine.stop() }
                     .controlSize(.small)
             }
         }
@@ -241,17 +203,9 @@ struct ContentView: View {
 
     // MARK: - Helpers
 
-    private var canPlay: Bool {
-        sidecar.state.isReady && engine.waypoints.count >= 1
-    }
-
     private func handleTap(_ c: CLLocationCoordinate2D) {
-        switch mode {
-        case .teleport:
-            engine.teleport(to: c)
-        case .route:
-            engine.addWaypoint(c)
-        }
+        searchFocused = false  // 点击地图 = 取消搜索聚焦
+        engine.teleport(to: c)
     }
 
     private func statusRow(ok: Bool, label: String) -> some View {
@@ -260,18 +214,6 @@ struct ContentView: View {
                 .foregroundStyle(ok ? .green : .red)
             Text(label).fixedSize(horizontal: false, vertical: true)
         }
-    }
-
-    private func formatDistance(_ m: Double) -> String {
-        m >= 1000 ? String(format: "%.2f km", m / 1000) : String(format: "%.0f m", m)
-    }
-
-    private func formatDuration(_ s: Double) -> String {
-        let total = Int(s.rounded())
-        let h = total / 3600, m = (total % 3600) / 60, sec = total % 60
-        if h > 0 { return "\(h)h \(m)m" }
-        if m > 0 { return "\(m)m \(sec)s" }
-        return "\(sec)s"
     }
 }
 

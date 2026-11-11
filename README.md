@@ -1,195 +1,224 @@
 <p align="center">
-  <img src="assets/icon_1024.png" alt="iOS Fake GPS icon" width="160" height="160">
+  <img src="assets/icon_1024.png" alt="iOS Fake GPS 图标" width="160" height="160">
 </p>
 
 <h1 align="center">iOS Fake GPS</h1>
 
-<p align="center">A Lockito-style location simulator for iPhone — a clean macOS app.</p>
+<p align="center">一款 Lockito 风格的 iPhone 定位模拟器 —— 纯净的 macOS 原生应用。</p>
 
 <p align="center">
-  <a href="https://github.com/orestislef/ios-fake-gps/releases/latest"><img src="https://img.shields.io/badge/download-macOS%20app-blue" alt="Download"></a>
+  <a href="https://github.com/orestislef/ios-fake-gps/releases/latest"><img src="https://img.shields.io/badge/download-macOS%20app-blue" alt="下载"></a>
   <a href="https://github.com/orestislef/ios-fake-gps/actions/workflows/ci.yml"><img src="https://github.com/orestislef/ios-fake-gps/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
-  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="License: MIT"></a>
-  <img src="https://img.shields.io/badge/platform-macOS%20·%20Apple%20silicon-lightgrey" alt="Platform">
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="许可证：MIT"></a>
+  <img src="https://img.shields.io/badge/platform-macOS%20·%20Apple%20silicon-lightgrey" alt="平台">
   <img src="https://img.shields.io/badge/iOS-17%2B-black" alt="iOS 17+">
 </p>
 
 <p align="center">
-  <a href="https://github.com/orestislef/ios-fake-gps/releases/latest"><b>⬇️ Download for macOS</b></a>
+  <a href="https://github.com/orestislef/ios-fake-gps/releases/latest"><b>⬇️ 下载 macOS 版</b></a>
   &nbsp;·&nbsp;
-  <a href="#get-started">Get started</a>
+  <a href="#快速开始">快速开始</a>
   &nbsp;·&nbsp;
-  <a href="https://github.com/orestislef/ios-fake-gps/discussions">Discussions</a>
+  <a href="https://github.com/orestislef/ios-fake-gps/discussions">讨论区</a>
   &nbsp;·&nbsp;
-  ⭐ Star the repo if it helps you!
+  ⭐ 如果这个项目对你有帮助，欢迎点个 Star！
 </p>
 
-Set a fixed location **or** play a moving route (with adjustable speed, looping
-and GPS jitter) on a **non-jailbroken** iPhone. Everything is driven from a
-native macOS app — the iPhone just needs to be plugged in.
+在**未越狱**的 iPhone 上设置固定位置，**或**播放移动路线（可调节速度、循环
+和 GPS 抖动）。一切都通过原生 macOS 应用驱动 —— 只需用数据线把 iPhone 连上 Mac。
 
-This is the iOS counterpart to Android's **Lockito**. Unlike Android, iOS has no
-public "mock location" API, so an app installed *on the phone* can't fake GPS for
-other apps. Instead the location is driven from a tethered Mac over Apple's
-**developer tunnel** — the same mechanism Xcode uses to simulate location while
-debugging. Whatever you set is seen **system-wide** by every app on the device.
+这是 Android 上 **Lockito** 的 iOS 对应版本。与 Android 不同，iOS 没有公开的
+"模拟定位" API，所以安装在*手机上*的应用无法为其他应用伪造 GPS。本项目改用
+Apple 的**开发者隧道**（developer tunnel）从连接的 Mac 端驱动定位 —— 与 Xcode
+调试时模拟位置用的是同一机制。你设置的任何位置都会被设备上**所有应用**视为
+系统级定位。
 
-![The macOS app: route mode over the Bay Area, tunnel connected](docs/app.png)
+![macOS 应用：路线模式下的旧金山湾区，隧道已连接](docs/app.png)
 
-> **Use responsibly.** This is meant for testing location-aware apps you own and
-> for personal use. Using it to defeat anti-cheat, commit fraud, or bypass
-> location-based access controls breaks those services' terms — and possibly the
-> law.
+> **请负责任地使用。** 本工具用于测试你自己的位置感知应用以及个人用途。
+> 用它规避反作弊、实施欺诈或绕过基于位置的访问控制，违反相关服务条款，
+> 也可能触犯法律。
 
-## Get started
+## 快速开始
 
-1. Download the latest **FakeGPS-macos-arm64.zip** from the
-   [**Releases**](https://github.com/orestislef/ios-fake-gps/releases) page and
-   unzip it.
-2. Drag **FakeGPS.app** into your **Applications** folder.
-3. First launch only: macOS warns it's from an unidentified developer (the app
-   isn't notarized). **Right-click the app → Open** and confirm. If it still
-   refuses, run once:
+1. 从 [**Releases**](https://github.com/orestislef/ios-fake-gps/releases) 页面
+   下载最新的 **FakeGPS-macos-arm64.zip** 并解压。
+2. 把 **FakeGPS.app** 拖进**应用程序（Applications）**文件夹。
+3. 仅首次启动需要：macOS 会提示"来自身份不明的开发者"（应用未经公证）。
+   **右键点击应用 → 打开**并确认。如果仍然无法打开，运行一次：
    ```bash
    xattr -dr com.apple.quarantine /Applications/FakeGPS.app
    ```
-4. Open the app. A short **setup checklist** walks you through the rest — plug in
-   your iPhone, start the tunnel, and connect.
+4. 打开应用。一个简短的**设置清单**会引导你完成剩余步骤 —— 插上 iPhone、
+   启动隧道、连接。
 
-That's it. The app has the engine bundled inside it, so **you don't need to
-install Python or anything else**, and you never need the Terminal.
+就这么简单。引擎已打包在应用内，**无需安装 Python 或其他任何东西**，
+完全不用碰终端。
 
-### What the checklist asks for
+### 设置清单会要求做什么
 
-These are the only steps Apple requires a human to do — nothing to download:
+以下是 Apple 要求人工完成的仅有步骤 —— 无需下载任何东西：
 
-- **Connect your iPhone** — plug it in with a USB cable, tap **Trust**, and turn
-  on **Developer Mode** (Settings ▸ Privacy & Security ▸ Developer Mode). The app
-  shows ✓ the moment it sees the device.
-- **Start the secure tunnel** — one button; it asks for your Mac password once
-  per session (the tunnel runs as root, which Apple requires).
-- **Connect** — links the app to the device. Done.
+- **连接 iPhone** —— 用 USB 数据线插上，点按**信任**，并打开**开发者模式**
+  （设置 ▸ 隐私与安全性 ▸ 开发者模式）。设备一被识别，应用就会显示 ✓。
+- **启动安全隧道** —— 一个按钮；每个会话会要求输入一次 Mac 密码
+  （隧道以 root 运行，这是 Apple 的要求）。
+- **连接** —— 将应用与设备链接。完成。
 
-## Features
+## 功能
 
-- **Teleport** — click the map or search an address to jump the device there.
-- **Route playback** — drop waypoints and move along them continuously.
-- **Speed control** — 1–300 km/h, with smooth per-second interpolation.
-- **Loop** a route indefinitely.
-- **GPS jitter** — add a few metres of noise so the track looks natural.
-- **Address / place search** powered by MapKit.
-- **Live position marker**, plus distance and ETA readouts.
-- **Auto-reset on exit** — disconnecting or quitting restores the phone's real
-  location automatically, so you're never left on a fake position.
+- **默认中国大陆地图** —— 打开即显示中国全境，并自动居中到 Mac 的当前位置。
+- **一键回到当前位置** —— 地图右下角的定位按钮，随时把地图居中回 Mac 所在地。
+- **简体中文搜索** —— 直接输入中文地名 / 地址即可搜索。
+- **传送** —— 点击地图或搜索地址，把设备瞬间移动过去。
+- **随机偏移** —— 可选开关：每次传送在选中位置 100 米范围内随机取一个点
+  （圆内均匀分布）。
+- **退出自动复位** —— 断开连接或退出应用时会自动恢复手机的真实位置，
+  绝不会把你留在假位置上。
 
-## How it works
+## 工作原理
 
 ```
-macOS app (SwiftUI + MapKit)            bundled engine              iPhone
-  search / drop pins / route ─────────▶  pymobiledevice3  ──tunnel──▶  every app
-  speed · loop · jitter      ◀─────────  LocationSimulation   (DDI)     sees fake GPS
-  interpolates the movement              (frozen, inside .app)
+macOS 应用 (SwiftUI + MapKit)             内置引擎                    iPhone
+  搜索 / 放置路径点 / 路线 ─────────▶  pymobiledevice3  ──隧道──▶   所有应用
+  速度 · 循环 · 抖动         ◀─────────  LocationSimulation  (DDI)   看到的都是假 GPS
+  负责移动插值                           （冻结打包在 .app 内）
 ```
 
-- The **app** owns the map, route editing and movement interpolation, so speed /
-  pause / loop / jitter are all controlled on the Mac side.
-- The **engine** is a small Python program (built on
-  [pymobiledevice3](https://github.com/doronz88/pymobiledevice3)) frozen into a
-  standalone binary inside `FakeGPS.app` — no Python needed on your Mac. It holds
-  one developer connection open and applies each coordinate.
-- A small **tunnel daemon** (started by the app, as root) opens the developer
-  tunnel and mounts the Developer Disk Image. Required on iOS 17+.
+- **应用**负责地图、路线编辑和移动插值，因此速度 / 暂停 / 循环 / 抖动
+  全部在 Mac 端控制。
+- **引擎**是一个小型 Python 程序（基于
+  [pymobiledevice3](https://github.com/doronz88/pymobiledevice3) 构建），
+  冻结为独立二进制文件打包在 `FakeGPS.app` 内 —— Mac 上无需安装 Python。
+  它保持一条开发者连接常开，逐个应用坐标。
+- 一个小型**隧道守护进程**（由应用以 root 身份启动）打开开发者隧道并挂载
+  Developer Disk Image。iOS 17+ 必需。
 
-## Requirements
+## 系统要求
 
-- A Mac on **Apple silicon** (the prebuilt app is `arm64`; tested on M1 and M4).
-- An iPhone on **iOS 17 or newer** with a USB cable and **Developer Mode** on.
+- **Apple silicon** 芯片的 Mac（预构建应用为 `arm64`；已在 M1 和 M4 上测试）。
+- **iOS 17 或更新版本**的 iPhone，配有 USB 数据线并开启**开发者模式**。
 
-## For developers — build from source
+## 开发者 —— 从源码构建
 
-The app is a Swift Package (`macapp/`) plus a Python engine (`sidecar/`).
+应用是一个 Swift Package（`macapp/`）加一个 Python 引擎（`sidecar/`）。
 
-Set up the Python side once (kept in `~/.ios-fake-gps`, **not** `~/Documents`,
-because the root tunnel daemon can't read TCC-protected folders):
+### 前置条件
+
+- macOS 14 或更新版本，**Apple silicon**
+- [Xcode](https://developer.apple.com/xcode/)（或其 Command Line Tools），用于 Swift
+- Python 3（系统自带的 `/usr/bin/python3` 即可），用于引擎 venv
+
+### 1. 配置 Python 引擎（一次性）
+
+安装到 `~/.ios-fake-gps`，而**不是** `~/Documents`，因为 root 隧道守护进程
+无法读取受 TCC 保护的文件夹：
 
 ```bash
 ./setup.sh
 ```
 
-Run the app from source:
+它会创建 venv、安装 `pymobiledevice3` 并复制引擎脚本。如果中途失败
+（网络慢时大文件下载可能超时），检查
+`~/.ios-fake-gps/venv/bin/pip list` —— 若缺少 `pymobiledevice3`，
+重新运行 `./setup.sh`，或直接手动安装：
 
 ```bash
-cd macapp && swift run        # or open macapp/Package.swift in Xcode and Run
+~/.ios-fake-gps/venv/bin/pip install -r sidecar/requirements.txt
+cp sidecar/gpsd_helper.py sidecar/fakegps_runtime.py ~/.ios-fake-gps/
 ```
 
-Produce the bundled, double-clickable app and a release zip:
+### 2. 从源码运行应用
 
 ```bash
-./scripts/build_app.sh        # builds the engine + app -> dist/FakeGPS.app + zip
+cd macapp && swift run        # 或在 Xcode 中打开 macapp/Package.swift 后运行
 ```
 
-Regenerate the icon:
+> **注意：** **首次** `swift build` 可能需要几分钟（要编译完整的调试模块
+> 缓存）；之后的增量编译只需几秒。如果看起来卡住了，其实还在编译 ——
+> 耐心等待即可。
+
+窗口打开后，按应用内的清单操作：插上 iPhone（USB + 信任 + 开发者模式），
+按**启动隧道**（会要求输入管理员密码），然后**连接**。
+
+### 3. 构建可分发的应用（可选）
+
+生成内置引擎、可双击打开的应用及发布 zip：
+
+```bash
+./scripts/build_app.sh        # 构建引擎 + 应用 -> dist/FakeGPS.app + zip
+```
+
+需要先在 venv 中安装 **PyInstaller**（`setup.sh` 不会安装它）：
+
+```bash
+~/.ios-fake-gps/venv/bin/pip install pyinstaller
+```
+
+构建出的应用未经公证，移入 `/Applications` 后需清除一次隔离属性：
+
+```bash
+xattr -dr com.apple.quarantine /Applications/FakeGPS.app
+```
+
+### 重新生成图标
 
 ```bash
 ~/.ios-fake-gps/venv/bin/python scripts/make_icon.py
 iconutil -c icns assets/AppIcon.iconset -o assets/AppIcon.icns
 ```
 
-### Project layout
+### 项目结构
 
 ```
 ios-fake-gps/
-├── macapp/Sources/FakeGPS/   the macOS app (SwiftUI + MapKit)
-├── sidecar/                  the Python engine + runtime entry point
-├── scripts/                  build_runtime.sh, build_app.sh, make_icon.py
-├── assets/                   app icon
-└── docs/                     screenshots
+├── macapp/Sources/FakeGPS/   macOS 应用（SwiftUI + MapKit）
+├── sidecar/                  Python 引擎 + 运行时入口
+├── scripts/                  build_runtime.sh、build_app.sh、make_icon.py
+├── assets/                   应用图标
+└── docs/                     截图
 ```
 
-## Command-line use (optional)
+## 命令行使用（可选）
 
-The engine inside the app also works from the Terminal. Start the tunnel:
+应用内的引擎也可以直接在终端使用。先启动隧道：
 
 ```bash
 sudo "/Applications/FakeGPS.app/Contents/Resources/runtime/fakegps-runtime" tunneld
 ```
 
-Then set a location directly with `pymobiledevice3` (bundled in the app), e.g.
-Liberty Island:
+然后用应用内置的 `pymobiledevice3` 列出设备：
 
 ```bash
 "/Applications/FakeGPS.app/Contents/Resources/runtime/fakegps-runtime" sidecar --list
 ```
 
-## Troubleshooting
+## 故障排查
 
-- **App won't open ("unidentified developer")** — right-click → Open, or run
-  `xattr -dr com.apple.quarantine /Applications/FakeGPS.app`.
-- **Tunnel won't start** — make sure you entered the admin password; the daemon
-  needs root. Logs are at `/tmp/ios-fake-gps-tunneld.log`.
-- **iPhone never detected** — check the cable, tap **Trust** on the phone, and
-  confirm **Developer Mode** is enabled (then reboot the phone).
-- **"Could not open LocationSimulation"** — Developer Mode is off or the Developer
-  Disk Image hasn't mounted yet; give the tunnel a few seconds after starting.
+- **应用打不开（"身份不明的开发者"）** —— 右键 → 打开，或运行
+  `xattr -dr com.apple.quarantine /Applications/FakeGPS.app`。
+- **隧道启动失败** —— 确认已输入管理员密码；守护进程需要 root。
+  日志位于 `/tmp/ios-fake-gps-tunneld.log`。
+- **一直检测不到 iPhone** —— 检查数据线，在手机上点按**信任**，并确认
+  **开发者模式**已开启（然后重启手机）。
+- **"无法打开 LocationSimulation"** —— 开发者模式未开启，或 Developer Disk
+  Image 尚未挂载；隧道启动后等几秒再试。
 
-## Limitations
+## 限制
 
-- The Mac must stay tethered (USB; Wi-Fi works after an initial USB pairing).
-- The tunnel runs as root, so it asks for your password once per session — an
-  Apple requirement that can't be removed (it's why this can't be an App Store
-  app, and why no on-device-only app can do this).
-- It sets the reported location only; it doesn't fake Wi-Fi or cell-tower
-  signals, so a few apps that cross-check those may notice the mismatch.
+- Mac 必须保持连接（USB；初次 USB 配对后 Wi-Fi 也可用）。
+- 隧道以 root 运行，因此每个会话会要求一次密码 —— 这是 Apple 的硬性要求，
+  无法去除（这也是它没法上 App Store、以及任何纯设备端应用做不到的原因）。
+- 它只修改上报的位置；不会伪造 Wi-Fi 或基站信号，因此少数交叉校验这些
+  信号的应用可能会察觉不一致。
 
-## Contributing
+## 参与贡献
 
-Contributions are welcome — see [CONTRIBUTING.md](CONTRIBUTING.md) and the
-[Code of Conduct](CODE_OF_CONDUCT.md). For security reports, see
-[SECURITY.md](SECURITY.md).
+欢迎贡献 —— 见 [CONTRIBUTING.md](CONTRIBUTING.md) 和
+[行为准则](CODE_OF_CONDUCT.md)。安全问题报告请见 [SECURITY.md](SECURITY.md)。
 
-## License & use
+## 许可与使用
 
-Released under the [MIT License](LICENSE). Please read the
-[Disclaimer](DISCLAIMER.md): this tool is for lawful testing and personal use
-only — not for fraud, evading anti-cheat/anti-fraud systems, or deceiving third
-parties.
+基于 [MIT 许可证](LICENSE) 发布。请阅读[免责声明](DISCLAIMER.md)：
+本工具仅用于合法测试和个人用途 —— 不得用于欺诈、规避反作弊/反欺诈系统
+或欺骗第三方。

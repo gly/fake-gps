@@ -53,6 +53,10 @@ cat > "$APP/Contents/Info.plist" <<PLIST
   <key>LSMinimumSystemVersion</key><string>14.0</string>
   <key>NSHighResolutionCapable</key><true/>
   <key>NSPrincipalClass</key><string>NSApplication</string>
+  <key>NSLocationUsageDescription</key>
+  <string>获取 Mac 当前位置，以便打开应用时将地图自动居中到当前位置。</string>
+  <key>NSLocationWhenInUseUsageDescription</key>
+  <string>获取 Mac 当前位置，以便打开应用时将地图自动居中到当前位置。</string>
 </dict>
 </plist>
 PLIST

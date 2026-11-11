@@ -85,4 +85,18 @@ enum Geo {
             longitude: c.longitude + degrees(dLon)
         )
     }
+
+    /// 在 `c` 周围半径 `radius` 米内均匀随机取一个点（真随机，每次不同）。
+    /// 用 `sqrt` 保证圆内均匀分布（避免集中在圆心附近）。
+    static func randomOffset(_ c: CLLocationCoordinate2D, radius: Double) -> CLLocationCoordinate2D {
+        guard radius > 0 else { return c }
+        let r = radius * sqrt(Double.random(in: 0 ... 1))
+        let angle = Double.random(in: 0 ..< (2 * .pi))
+        let dLat = (r * cos(angle)) / earthRadius
+        let dLon = (r * sin(angle)) / (earthRadius * cos(radians(c.latitude)))
+        return CLLocationCoordinate2D(
+            latitude: c.latitude + degrees(dLat),
+            longitude: c.longitude + degrees(dLon)
+        )
+    }
 }

@@ -15,7 +15,7 @@ struct MapView: NSViewRepresentable {
     func makeCoordinator() -> Coordinator { Coordinator(self) }
 
     func makeNSView(context: Context) -> MKMapView {
-        let map = MKMapView()
+        let map = NoFirstResponderMapView()
         map.delegate = context.coordinator
         map.showsZoomControls = true
         map.showsCompass = true
@@ -46,14 +46,15 @@ struct MapView: NSViewRepresentable {
         map.addGestureRecognizer(doubleClick)
         context.coordinator.mapView = map
         context.coordinator.bindController()
-        // Default region: roughly continental view until the user picks a spot.
+        // 默认区域：中国大陆全景；拿到 Mac 当前位置后会自动居中过去。
         map.setRegion(
             MKCoordinateRegion(
-                center: CLLocationCoordinate2D(latitude: 37.33, longitude: -122.03),
-                span: MKCoordinateSpan(latitudeDelta: 0.2, longitudeDelta: 0.2)
+                center: CLLocationCoordinate2D(latitude: 34.5, longitude: 108.0),
+                span: MKCoordinateSpan(latitudeDelta: 28, longitudeDelta: 28)
             ),
             animated: false
         )
+        context.coordinator.startLocation()
         return map
     }
 
@@ -64,16 +65,19 @@ struct MapView: NSViewRepresentable {
 
     // MARK: - Coordinator
 
-    final class Coordinator: NSObject, MKMapViewDelegate {
+    final class Coordinator: NSObject, MKMapViewDelegate, CLLocationManagerDelegate {
         var parent: MapView
         weak var mapView: MKMapView?
         private var routeOverlay: MKPolyline?
         private let currentAnnotation = MKPointAnnotation()
         private var hasCurrent = false
+        private let locationManager = CLLocationManager()
+        private var centeredOnUser = false
+        private var lastUserLocation: CLLocation?
 
         init(_ parent: MapView) {
             self.parent = parent
-            currentAnnotation.title = "Simulated position"
+            currentAnnotation.title = "模拟位置"
         }
 
         /// Expose map commands to SwiftUI through the shared MapController.
@@ -96,6 +100,22 @@ struct MapView: NSViewRepresentable {
                 map.setRegion(region, animated: true)
             }
             controller.currentCenter = { [weak self] in self?.mapView?.region.center }
+            // 「回到当前位置」按钮：居中到最新定位；还没有定位时重新发起定位请求。
+            controller.locateUser = { [weak self] in
+                guard let self, let map = self.mapView else { return }
+                if let loc = self.lastUserLocation {
+                    map.setRegion(
+                        MKCoordinateRegion(
+                            center: loc.coordinate,
+                            latitudinalMeters: 2_000,
+                            longitudinalMeters: 2_000
+                        ),
+                        animated: true
+                    )
+                } else {
+                    self.startLocation()
+                }
+            }
         }
 
         @objc func handleClick(_ gr: NSClickGestureRecognizer) {
@@ -103,6 +123,33 @@ struct MapView: NSViewRepresentable {
             let point = gr.location(in: map)
             let coord = map.convert(point, toCoordinateFrom: map)
             parent.onTap(coord)
+        }
+
+        // MARK: - Mac 当前定位
+
+        /// 请求 Mac 的当前位置：授权后第一次拿到定位就把地图居中过去，
+        /// 并显示系统自带的蓝点标记。未授权时地图保持默认的中国全境视图。
+        func startLocation() {
+            locationManager.delegate = self
+            locationManager.desiredAccuracy = kCLLocationAccuracyHundredMeters
+            locationManager.requestWhenInUseAuthorization()
+            locationManager.startUpdatingLocation()
+        }
+
+        func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
+            guard let map = mapView, let loc = locations.last else { return }
+            lastUserLocation = loc
+            map.showsUserLocation = true
+            guard !centeredOnUser else { return }
+            centeredOnUser = true
+            map.setRegion(
+                MKCoordinateRegion(
+                    center: loc.coordinate,
+                    latitudinalMeters: 2_000,
+                    longitudinalMeters: 2_000
+                ),
+                animated: true
+            )
         }
 
         /// No-op: lets MapKit's built-in double-click-to-zoom handle the gesture.
@@ -181,3 +228,9 @@ struct MapView: NSViewRepresentable {
 
 /// Distinguishes user-placed waypoints from the live position marker.
 final class WaypointAnnotation: MKPointAnnotation {}
+
+/// MKMapView 会抢夺第一响应者（键盘焦点），导致窗口里的 SwiftUI 输入框
+/// 无法输入。禁用它接受焦点的能力，键盘焦点留给搜索框。
+final class NoFirstResponderMapView: MKMapView {
+    override var acceptsFirstResponder: Bool { false }
+}

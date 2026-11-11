@@ -42,7 +42,7 @@ struct FakeGPSApp: App {
     }
 
     var body: some Scene {
-        WindowGroup("iOS Fake GPS") {
+        WindowGroup("iOS 模拟定位") {
             ContentView()
                 .environmentObject(config)
                 .environmentObject(sidecar)
