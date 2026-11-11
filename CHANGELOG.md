@@ -13,7 +13,7 @@ All notable changes to this project are documented here. The format is based on
 
 ### Changed
 - 交互重构：地图只负责选点，新增「立即更新」按钮，并记住上次使用的位置。
-- README 精简为项目简介与下载入口。
+- README 精简为使用指南，下载链接指向本仓库。
 
 ### Fixed
 - 修复地址搜索框的输入焦点问题。
