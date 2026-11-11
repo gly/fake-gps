@@ -1,0 +1,33 @@
+name: Sync release notes
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - .github/workflows/sync-release-notes.yml
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Update v0.4.0 release notes
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cat > notes.md <<'EOF'
+          ## 下载
+
+          | 芯片 | 下载 |
+          | --- | --- |
+          | Apple silicon（M1/M2/M3/M4） | [FakeGPS-macos-arm64.zip](https://github.com/gly/fake-gps/releases/download/v0.4.0/FakeGPS-macos-arm64.zip) |
+          | Intel | [FakeGPS-macos-x86_64.zip](https://github.com/gly/fake-gps/releases/download/v0.4.0/FakeGPS-macos-x86_64.zip) |
+
+          如果 macOS 提示“来自身份不明的开发者”，请右键应用 → 打开，或运行
+          `xattr -dr com.apple.quarantine /Applications/FakeGPS.app`。
+
+          **完整更新日志**：https://github.com/gly/fake-gps/commits/v0.4.0
+          EOF
+          gh release edit v0.4.0 --repo "$GITHUB_REPOSITORY" --notes-file notes.md
