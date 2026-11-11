@@ -7,7 +7,8 @@ import SwiftUI
 /// route polyline, and shows a live marker at the simulated position.
 struct MapView: NSViewRepresentable {
     var waypoints: [Waypoint]
-    var currentCoordinate: CLLocationCoordinate2D?
+    /// 地图上显示的主标记（当前选中的位置）。
+    var markerCoordinate: CLLocationCoordinate2D?
     var controller: MapController
     /// Called with the map coordinate the user clicked.
     var onTap: (CLLocationCoordinate2D) -> Void
@@ -60,7 +61,7 @@ struct MapView: NSViewRepresentable {
 
     func updateNSView(_ map: MKMapView, context: Context) {
         context.coordinator.parent = self
-        context.coordinator.sync(waypoints: waypoints, current: currentCoordinate)
+        context.coordinator.sync(waypoints: waypoints, current: markerCoordinate)
     }
 
     // MARK: - Coordinator
@@ -77,7 +78,7 @@ struct MapView: NSViewRepresentable {
 
         init(_ parent: MapView) {
             self.parent = parent
-            currentAnnotation.title = "模拟位置"
+            currentAnnotation.title = "选中位置"
         }
 
         /// Expose map commands to SwiftUI through the shared MapController.

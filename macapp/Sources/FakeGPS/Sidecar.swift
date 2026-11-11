@@ -5,18 +5,46 @@ import Foundation
 struct DeviceInfo: Identifiable, Hashable, Codable {
     var udid: String
     var name: String?
+    /// 手机上自定义的名称（lockdown 的 DeviceName，如「Leo 的 iPhone」）。
+    var deviceName: String?
     var productType: String?
     var productVersion: String?
 
     var id: String { udid }
-    var display: String {
-        let model = productType ?? "iPhone"
-        let os = productVersion.map { " · iOS \($0)" } ?? ""
-        return "\(name ?? model)\(os)"
+
+    /// 营销型号名（如 iPhone15,2 -> iPhone 14 Pro）；未知型号回退到原始标识符。
+    var modelName: String {
+        guard let t = productType else { return "iPhone" }
+        return Self.friendlyModelNames[t] ?? "iPhone (\(t))"
     }
 
+    var display: String {
+        "\(modelName) · iOS \(productVersion ?? "?")"
+    }
+
+    static let friendlyModelNames: [String: String] = [
+        "iPhone10,2": "iPhone XS", "iPhone10,5": "iPhone XS",
+        "iPhone10,3": "iPhone XS Max", "iPhone10,6": "iPhone XS Max",
+        "iPhone11,8": "iPhone XR",
+        "iPhone12,1": "iPhone 11 Pro", "iPhone12,3": "iPhone 11 Pro Max",
+        "iPhone12,5": "iPhone 11 Pro Max",
+        "iPhone12,8": "iPhone SE（第二代）",
+        "iPhone13,1": "iPhone 12 mini", "iPhone13,2": "iPhone 12",
+        "iPhone13,3": "iPhone 12 Pro", "iPhone13,4": "iPhone 12 Pro Max",
+        "iPhone14,2": "iPhone 13 Pro", "iPhone14,3": "iPhone 13 Pro Max",
+        "iPhone14,4": "iPhone 13 mini", "iPhone14,5": "iPhone 13",
+        "iPhone14,6": "iPhone SE（第三代）",
+        "iPhone14,7": "iPhone 14", "iPhone14,8": "iPhone 14 Plus",
+        "iPhone15,2": "iPhone 14 Pro", "iPhone15,3": "iPhone 14 Pro Max",
+        "iPhone15,4": "iPhone 15", "iPhone15,5": "iPhone 15 Plus",
+        "iPhone16,1": "iPhone 15 Pro", "iPhone16,2": "iPhone 15 Pro Max",
+        "iPhone17,3": "iPhone 16", "iPhone17,4": "iPhone 16 Plus",
+        "iPhone17,5": "iPhone 16 Pro", "iPhone17,6": "iPhone 16 Pro Max",
+        "iPhone17,7": "iPhone 16e",
+    ]
+
     enum CodingKeys: String, CodingKey {
-        case udid, name
+        case udid, name, deviceName
         case productType = "product_type"
         case productVersion = "product_version"
     }

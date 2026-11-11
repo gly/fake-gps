@@ -51,7 +51,7 @@ struct ContentView: View {
     private var mapArea: some View {
         MapView(
             waypoints: engine.waypoints,
-            currentCoordinate: engine.currentCoordinate,
+            markerCoordinate: engine.selectedCoordinate,
             controller: mapController,
             onTap: handleTap
         )
@@ -126,7 +126,7 @@ struct ContentView: View {
     private func choose(_ item: MKMapItem) {
         let coord = item.coordinate
         mapController.center(on: coord, meters: 1_200)
-        engine.teleport(to: coord)
+        engine.select(coord)
         searchFocused = false  // 选中结果后取消聚焦
         search.clear()
     }
@@ -167,7 +167,16 @@ struct ContentView: View {
             case .launching:
                 HStack { ProgressView().controlSize(.small); Text("连接中…") }
             case let .ready(dev):
-                statusRow(ok: true, label: dev.display)
+                statusRow(ok: true, label: "设备已连接")
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(dev.modelName).font(.body.weight(.medium))
+                    if let n = dev.deviceName {
+                        Text("名称：\(n)").font(.caption).foregroundStyle(.secondary)
+                    }
+                    if let v = dev.productVersion {
+                        Text("iOS \(v)").font(.caption).foregroundStyle(.secondary)
+                    }
+                }
                 Button("断开连接") { engine.stop(); sidecar.stop() }
             case let .failed(msg):
                 statusRow(ok: false, label: "连接失败")
@@ -186,14 +195,33 @@ struct ContentView: View {
         VStack(alignment: .leading, spacing: 8) {
             Text("传送").font(.headline)
 
-            Text("点击地图或搜索地址，将设备瞬间传送到该位置。")
+            Text("点击地图或搜索选择位置，然后点「立即更新」应用到设备。")
                 .font(.caption).foregroundStyle(.secondary)
 
             Toggle("选中位置 100 米内随机", isOn: $engine.randomOffset)
 
             if engine.randomOffset {
-                Text("已开启：每次传送会在选中位置 100 米范围内随机取一个点。")
+                Text("已开启：每次选择会在点击位置 100 米范围内随机取一个点。")
                     .font(.caption).foregroundStyle(.secondary)
+            }
+
+            if let c = engine.selectedCoordinate {
+                Text(String(format: "已选择：%.6f, %.6f", c.latitude, c.longitude))
+                    .font(.caption.monospaced()).foregroundStyle(.secondary)
+            }
+
+            Button {
+                engine.applySelected()
+            } label: {
+                Label("立即更新", systemImage: "arrow.up.circle.fill")
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.borderedProminent)
+            .disabled(engine.selectedCoordinate == nil || !sidecar.state.isReady)
+
+            if engine.selectedCoordinate != nil && !sidecar.state.isReady {
+                Text("连接设备后才能更新位置。")
+                    .font(.caption).foregroundStyle(.orange)
             }
         }
     }
@@ -218,7 +246,7 @@ struct ContentView: View {
 
     private func handleTap(_ c: CLLocationCoordinate2D) {
         searchFocused = false  // 点击地图 = 取消搜索聚焦
-        engine.teleport(to: c)
+        engine.select(c)
     }
 
     private func statusRow(ok: Bool, label: String) -> some View {

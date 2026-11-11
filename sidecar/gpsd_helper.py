@@ -66,11 +66,16 @@ def log(*args: Any) -> None:
 
 
 def describe(rsd: RemoteServiceDiscoveryService) -> dict[str, Any]:
+    # rsd.name 是隧道标识符（usbmux-...-Network），对用户无意义；
+    # 真正的手机名称（DeviceName）要从 lockdown 的 all_values 里拿。
+    all_values = getattr(rsd, "all_values", None) or {}
+    device_name = all_values.get("DeviceName")
     return {
         "udid": rsd.udid,
-        "name": getattr(rsd, "name", None),
-        "product_type": getattr(rsd, "product_type", None),
-        "product_version": getattr(rsd, "product_version", None),
+        "name": device_name or getattr(rsd, "name", None),
+        "device_name": device_name,
+        "product_type": getattr(rsd, "product_type", None) or all_values.get("ProductType"),
+        "product_version": getattr(rsd, "product_version", None) or all_values.get("ProductVersion"),
     }
 
 

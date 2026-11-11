@@ -35,6 +35,9 @@ final class SimulationEngine: ObservableObject {
     static let randomRadiusMetres: Double = 100
 
     @Published private(set) var playback: PlaybackState = .idle
+    /// 地图 / 搜索选中的待应用位置（尚未发送到设备）。
+    @Published private(set) var selectedCoordinate: CLLocationCoordinate2D?
+    /// 已应用到设备的位置。
     @Published private(set) var currentCoordinate: CLLocationCoordinate2D?
     @Published private(set) var progress: Double = 0 // 0...1 along the route
 
@@ -44,8 +47,19 @@ final class SimulationEngine: ObservableObject {
     private let tick: TimeInterval = 1.0       // update cadence (s)
     private var jitterSeed: Double = 0
 
+    private enum Prefs {
+        static let latKey = "lastAppliedLatitude"
+        static let lonKey = "lastAppliedLongitude"
+    }
+
     init(sidecar: Sidecar) {
         self.sidecar = sidecar
+        // 启动时把上次「立即更新」的位置作为默认选中位置。
+        let d = UserDefaults.standard
+        if let lat = d.object(forKey: Prefs.latKey) as? Double,
+           let lon = d.object(forKey: Prefs.lonKey) as? Double {
+            selectedCoordinate = CLLocationCoordinate2D(latitude: lat, longitude: lon)
+        }
     }
 
     deinit {
@@ -68,16 +82,26 @@ final class SimulationEngine: ObservableObject {
         progress = 0
     }
 
-    // MARK: - Teleport (single static location)
+    // MARK: - 选择与应用
 
-    func teleport(to c: CLLocationCoordinate2D) {
-        guard sidecar.state.isReady else { return }
-        // 开启随机偏移时，在选中点周围 100 米内随机取点（圆内均匀分布）。
+    /// 地图点击 / 搜索选择位置（只记录，不更新设备）。
+    /// 开启随机偏移时，在点击位置周围 100 米内随机取点（圆内均匀分布），
+    /// 地图上看到的就是最终会应用的坐标。
+    func select(_ c: CLLocationCoordinate2D) {
         let target = randomOffset
             ? Geo.randomOffset(c, radius: Self.randomRadiusMetres)
             : c
-        currentCoordinate = target
-        sidecar.setLocation(target.latitude, target.longitude)
+        selectedCoordinate = target
+    }
+
+    /// 「立即更新」：把当前选中的位置应用到设备，并持久化供下次启动默认使用。
+    func applySelected() {
+        guard let c = selectedCoordinate, sidecar.state.isReady else { return }
+        currentCoordinate = c
+        sidecar.setLocation(c.latitude, c.longitude)
+        let d = UserDefaults.standard
+        d.set(c.latitude, forKey: Prefs.latKey)
+        d.set(c.longitude, forKey: Prefs.lonKey)
     }
 
     // MARK: - Route playback
@@ -85,8 +109,8 @@ final class SimulationEngine: ObservableObject {
     func play() {
         guard sidecar.state.isReady else { return }
         guard coordinates.count >= 2 else {
-            // A single point behaves like teleport.
-            if let only = coordinates.first { teleport(to: only) }
+            // A single point behaves like selecting it.
+            if let only = coordinates.first { select(only) }
             return
         }
         if playback == .idle { travelled = 0 }
