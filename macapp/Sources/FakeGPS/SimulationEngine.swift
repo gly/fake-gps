@@ -29,10 +29,9 @@ final class SimulationEngine: ObservableObject {
     @Published var speedKmh: Double = 50      // target ground speed
     @Published var loop: Bool = false
     @Published var jitterMetres: Double = 0   // 0 = perfectly smooth
-    /// 开启后，每次点「立即更新」会在选中位置 100 米范围内随机取一个点。
-    @Published var randomOffset: Bool = false
-    /// 随机偏移半径（米）。
-    static let randomRadiusMetres: Double = 100
+    /// 随机偏移半径（米）：0 表示关闭随机；最大 1000 米。
+    /// 大于 0 时，每次点「立即更新」会在选中位置该半径内随机取一个点。
+    @Published var randomRadiusMetres: Double = 0
     /// 火星坐标纠偏：中国大陆地图显示的是 GCJ-02 坐标，模拟定位按
     /// WGS-84 原始坐标注入；开启后自动换算，消除几百米偏移。境外自动跳过。
     @Published var marsCorrection: Bool = true
@@ -132,8 +131,8 @@ final class SimulationEngine: ObservableObject {
     func applySelected() -> Int? {
         guard let anchor = selectedCoordinate, sidecar.state.isReady else { return nil }
         // 随机偏移在 GCJ 坐标系内进行，与地图显示一致
-        let chosen = randomOffset
-            ? Geo.randomOffset(anchor, radius: Self.randomRadiusMetres)
+        let chosen = randomRadiusMetres > 0
+            ? Geo.randomOffset(anchor, radius: randomRadiusMetres)
             : anchor
         // 地图选中的是 GCJ-02（火星坐标）；模拟定位按 WGS-84 原始坐标注入，
         // 需要先换算，否则设备上会偏移几百米。境外位置无需换算。
@@ -142,7 +141,7 @@ final class SimulationEngine: ObservableObject {
             : chosen
         guard let id = sidecar.setLocation(target.latitude, target.longitude) else { return nil }
         currentCoordinate = target
-        appliedRandomCoordinate = randomOffset ? chosen : nil
+        appliedRandomCoordinate = randomRadiusMetres > 0 ? chosen : nil
         // 持久化保存地图显示坐标（GCJ-02），下次启动标记位置不变。
         let d = UserDefaults.standard
         d.set(chosen.latitude, forKey: Prefs.latKey)

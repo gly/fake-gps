@@ -196,10 +196,16 @@ struct ContentView: View {
             Text("点击地图或搜索选择位置，然后点「立即更新」应用到设备。")
                 .font(.caption).foregroundStyle(.secondary)
 
-            Toggle("选中位置 100 米内随机", isOn: $engine.randomOffset)
-
-            if engine.randomOffset {
-                Text("已开启：每次点「立即更新」会在选中位置 100 米范围内随机取一个点。")
+            HStack {
+                Text("随机偏移").frame(width: 54, alignment: .leading)
+                Slider(value: $engine.randomRadiusMetres, in: 0 ... 1000)
+                Text(engine.randomRadiusMetres < 1 ? "关闭" : "≤\(Int(engine.randomRadiusMetres.rounded())) 米")
+                    .monospacedDigit()
+                    .foregroundStyle(engine.randomRadiusMetres < 1 ? .secondary : .primary)
+                    .frame(width: 84, alignment: .trailing)
+            }
+            if engine.randomRadiusMetres < 1 {
+                Text("滑块大于 0 时，每次点「立即更新」会在选中位置该半径内随机取一个点。")
                     .font(.caption).foregroundStyle(.secondary)
             }
 
