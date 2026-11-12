@@ -3,6 +3,19 @@
 All notable changes to this project are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.1.0] - 2026-11-12
+
+### Added
+- 侧边栏「已选择」坐标下方显示具体位置名（CLGeocoder 反向地理编码）。
+- 启动时若有上次选中位置记录，地图自动放大到该位置。
+
+### Changed
+- 随机偏移交互改为 0–1000 米滑块（0 即关闭），替代固定 100 米开关。
+
+### Fixed
+- 修复启动放大不生效（`centeredOnUser` 访问级别导致编译失败被打包脚本吞掉），
+  打包命令增加编译错误检查。
+
 ## [1.0.0] - 2026-11-12
 
 ### Changed
@@ -71,6 +84,7 @@ All notable changes to this project are documented here. The format is based on
   bundled inside the app — no Python install required.
 - One-click tunnel daemon launch and packaged, double-clickable `FakeGPS.app`.
 
+[1.1.0]: https://github.com/gly/fake-gps/releases/tag/v1.1.0
 [1.0.0]: https://github.com/gly/fake-gps/releases/tag/v1.0.0
 [0.5.0]: https://github.com/gly/fake-gps/releases/tag/v0.5.0
 [0.4.0]: https://github.com/gly/fake-gps/releases/tag/v0.4.0
