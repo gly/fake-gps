@@ -47,14 +47,28 @@ struct MapView: NSViewRepresentable {
         map.addGestureRecognizer(doubleClick)
         context.coordinator.mapView = map
         context.coordinator.bindController()
-        // 默认区域：中国大陆全景；拿到 Mac 当前位置后会自动居中过去。
-        map.setRegion(
-            MKCoordinateRegion(
-                center: CLLocationCoordinate2D(latitude: 34.5, longitude: 108.0),
-                span: MKCoordinateSpan(latitudeDelta: 28, longitudeDelta: 28)
-            ),
-            animated: false
-        )
+        if let marker = markerCoordinate {
+            // 有上次「立即更新」留下的选中位置记录：直接放大到那个位置，
+            // 并跳过 Mac 当前定位的自动居中（蓝色小点仍会显示）。
+            context.coordinator.centeredOnUser = true
+            map.setRegion(
+                MKCoordinateRegion(
+                    center: marker,
+                    latitudinalMeters: 2_000,
+                    longitudinalMeters: 2_000
+                ),
+                animated: false
+            )
+        } else {
+            // 没有记录：默认显示中国大陆全景，拿到 Mac 当前位置后再自动居中。
+            map.setRegion(
+                MKCoordinateRegion(
+                    center: CLLocationCoordinate2D(latitude: 34.5, longitude: 108.0),
+                    span: MKCoordinateSpan(latitudeDelta: 28, longitudeDelta: 28)
+                ),
+                animated: false
+            )
+        }
         context.coordinator.startLocation()
         return map
     }
