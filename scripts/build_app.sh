@@ -9,7 +9,7 @@
 set -euo pipefail
 
 REPO="$(cd "$(dirname "$0")/.." && pwd)"
-VERSION="${VERSION:-0.1.0}"
+VERSION="${VERSION:-0.5.0}"
 APP="$REPO/dist/FakeGPS.app"
 ARCH="$(uname -m)"
 

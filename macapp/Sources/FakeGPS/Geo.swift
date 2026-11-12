@@ -72,6 +72,58 @@ enum Geo {
         return points.last
     }
 
+    // MARK: - 火星坐标（GCJ-02）换算
+
+    /// 判断是否在中国大陆坐标加密范围内（粗略矩形）。
+    static func isOutOfChina(_ c: CLLocationCoordinate2D) -> Bool {
+        c.longitude < 72.004 || c.longitude > 137.8347
+            || c.latitude < 0.8293 || c.latitude > 55.8271
+    }
+
+    /// WGS-84（GPS 原始坐标）→ GCJ-02（火星坐标）。国测局标准偏移算法。
+    static func wgs84ToGcj02(_ c: CLLocationCoordinate2D) -> CLLocationCoordinate2D {
+        if isOutOfChina(c) { return c }
+        let a = 6_378_245.0
+        let ee = 0.006_693_421_622_965_943_23
+        let dLat = transformLat(x: c.longitude - 105.0, y: c.latitude - 35.0)
+        let dLon = transformLon(x: c.longitude - 105.0, y: c.latitude - 35.0)
+        let radLat = c.latitude / 180.0 * .pi
+        var magic = sin(radLat)
+        magic = 1 - ee * magic * magic
+        let sqrtMagic = sqrt(magic)
+        let dLat2 = (dLat * 180.0) / ((a * (1 - ee)) / (magic * sqrtMagic) * .pi)
+        let dLon2 = (dLon * 180.0) / (a / sqrtMagic * cos(radLat) * .pi)
+        return CLLocationCoordinate2D(latitude: c.latitude + dLat2, longitude: c.longitude + dLon2)
+    }
+
+    /// GCJ-02（火星坐标）→ WGS-84（GPS 原始坐标）。
+    /// 反向迭代逼近，三次迭代误差已在厘米级以下。
+    static func gcj02ToWgs84(_ c: CLLocationCoordinate2D) -> CLLocationCoordinate2D {
+        var wgs = c
+        for _ in 0 ..< 3 {
+            let gcj = wgs84ToGcj02(wgs)
+            wgs.latitude -= gcj.latitude - c.latitude
+            wgs.longitude -= gcj.longitude - c.longitude
+        }
+        return wgs
+    }
+
+    private static func transformLat(x: Double, y: Double) -> Double {
+        var ret = -100.0 + 2.0 * x + 3.0 * y + 0.2 * y * y + 0.1 * x * y + 0.2 * sqrt(abs(x))
+        ret += (20.0 * sin(6.0 * x * .pi) + 20.0 * sin(2.0 * x * .pi)) * 2.0 / 3.0
+        ret += (20.0 * sin(y * .pi) + 40.0 * sin(y / 3.0 * .pi)) * 2.0 / 3.0
+        ret += (160.0 * sin(y / 12.0 * .pi) + 320.0 * sin(y * .pi / 30.0)) * 2.0 / 3.0
+        return ret
+    }
+
+    private static func transformLon(x: Double, y: Double) -> Double {
+        var ret = 300.0 + x + 2.0 * y + 0.1 * x * x + 0.1 * x * y + 0.1 * sqrt(abs(x))
+        ret += (20.0 * sin(6.0 * x * .pi) + 20.0 * sin(2.0 * x * .pi)) * 2.0 / 3.0
+        ret += (20.0 * sin(x * .pi) + 40.0 * sin(x / 3.0 * .pi)) * 2.0 / 3.0
+        ret += (150.0 * sin(x / 12.0 * .pi) + 300.0 * sin(x / 30.0 * .pi)) * 2.0 / 3.0
+        return ret
+    }
+
     /// Apply a small random horizontal jitter (metres) to mimic real GPS noise.
     static func jitter(_ c: CLLocationCoordinate2D, metres: Double, seed: Double) -> CLLocationCoordinate2D {
         guard metres > 0 else { return c }

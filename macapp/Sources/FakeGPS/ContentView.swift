@@ -13,6 +13,10 @@ struct ContentView: View {
     @StateObject private var search = PlaceSearch()
     /// 搜索框焦点：点击地图等其它区域时置为 false 取消聚焦。
     @FocusState private var searchFocused: Bool
+    /// 已发送但尚未收到设备回执的「立即更新」指令。
+    @State private var pendingApplyID: Int?
+    @State private var applyNotice: ApplyNotice?
+    @State private var noticeTask: Task<Void, Never>?
 
     var body: some View {
         HSplitView {
@@ -34,6 +38,19 @@ struct ContentView: View {
             }
         }
         .animation(.easeInOut(duration: 0.2), value: sidecar.state.isReady)
+        .onChange(of: sidecar.lastAcknowledgedID) { _, ack in
+            // 只有「立即更新」那一笔设备的回执才算成功；播放路线时的回调忽略。
+            guard let ack, ack == pendingApplyID else { return }
+            pendingApplyID = nil
+            if let offset = engine.appliedRandomDistance {
+                showNotice(.success(String(format: "已更新设备位置（随机偏移 %.0f 米）", offset)))
+            } else {
+                showNotice(.success("已更新设备位置"))
+            }
+        }
+        .onChange(of: sidecar.state) { _, state in
+            if case .failed = state { pendingApplyID = nil }
+        }
         .onChange(of: searchFocused) { _, focused in
             // 从其它应用切回来点击搜索框时，系统可能并未真正激活本应用
             // （macOS 14+ 协作激活会拒绝后台应用的立即激活请求），
@@ -51,30 +68,11 @@ struct ContentView: View {
     private var mapArea: some View {
         MapView(
             waypoints: engine.waypoints,
-            markerCoordinate: engine.selectedCoordinate,
+            markerCoordinate: engine.appliedRandomCoordinate ?? engine.selectedCoordinate,
             controller: mapController,
             onTap: handleTap
         )
         .overlay(alignment: .top) { searchOverlay }
-        .overlay(alignment: .bottomTrailing) { locateButton }
-    }
-
-    /// 地图右下角的「回到当前位置」按钮。
-    private var locateButton: some View {
-        Button {
-            searchFocused = false  // 点击地图区域 = 取消搜索聚焦
-            mapController.locateCurrentLocation()
-        } label: {
-            Image(systemName: "location.fill")
-                .font(.system(size: 14, weight: .semibold))
-                .foregroundStyle(.primary)
-                .frame(width: 32, height: 32)
-        }
-        .buttonStyle(.plain)
-        .background(.regularMaterial, in: Circle())
-        .overlay(Circle().strokeBorder(.quaternary))
-        .padding(12)
-        .help("定位到当前位置")
     }
 
     // MARK: - 搜索栏
@@ -201,7 +199,13 @@ struct ContentView: View {
             Toggle("选中位置 100 米内随机", isOn: $engine.randomOffset)
 
             if engine.randomOffset {
-                Text("已开启：每次选择会在点击位置 100 米范围内随机取一个点。")
+                Text("已开启：每次点「立即更新」会在选中位置 100 米范围内随机取一个点。")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
+
+            Toggle("火星坐标纠偏（中国大陆）", isOn: $engine.marsCorrection)
+            if engine.marsCorrection {
+                Text("已开启：中国大陆地图使用 GCJ-02 火星坐标，会自动换算成 WGS-84 原始坐标再下发，消除几百米偏移。境外位置自动跳过。")
                     .font(.caption).foregroundStyle(.secondary)
             }
 
@@ -210,14 +214,33 @@ struct ContentView: View {
                     .font(.caption.monospaced()).foregroundStyle(.secondary)
             }
 
+            if let r = engine.appliedRandomCoordinate {
+                Text(
+                    String(
+                        format: "已随机：%.6f, %.6f（距选中点 %.0f 米）",
+                        r.latitude, r.longitude, engine.appliedRandomDistance ?? 0
+                    )
+                )
+                .font(.caption.monospaced()).foregroundStyle(.green)
+            }
+
             Button {
-                engine.applySelected()
+                guard let id = engine.applySelected() else {
+                    showNotice(.failure("更新失败：设备连接已断开"))
+                    return
+                }
+                pendingApplyID = id
             } label: {
                 Label("立即更新", systemImage: "arrow.up.circle.fill")
                     .frame(maxWidth: .infinity)
             }
             .buttonStyle(.borderedProminent)
             .disabled(engine.selectedCoordinate == nil || !sidecar.state.isReady)
+
+            if let applyNotice {
+                noticeRow(applyNotice)
+                    .transition(.opacity)
+            }
 
             if engine.selectedCoordinate != nil && !sidecar.state.isReady {
                 Text("连接设备后才能更新位置。")
@@ -249,6 +272,29 @@ struct ContentView: View {
         engine.select(c)
     }
 
+    /// 显示一条自动消失的提示（成功为绿色，失败为橙色）。
+    private func showNotice(_ notice: ApplyNotice) {
+        noticeTask?.cancel()
+        withAnimation(.easeInOut(duration: 0.15)) { applyNotice = notice }
+        noticeTask = Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 2_500_000_000)
+            guard !Task.isCancelled else { return }
+            withAnimation(.easeInOut(duration: 0.2)) { applyNotice = nil }
+        }
+    }
+
+    @ViewBuilder
+    private func noticeRow(_ notice: ApplyNotice) -> some View {
+        switch notice {
+        case let .success(text):
+            Label(text, systemImage: "checkmark.circle.fill")
+                .font(.caption).foregroundStyle(.green)
+        case let .failure(text):
+            Label(text, systemImage: "exclamationmark.triangle.fill")
+                .font(.caption).foregroundStyle(.orange)
+        }
+    }
+
     private func statusRow(ok: Bool, label: String) -> some View {
         HStack(spacing: 6) {
             Image(systemName: ok ? "checkmark.circle.fill" : "xmark.circle.fill")
@@ -256,6 +302,11 @@ struct ContentView: View {
             Text(label).fixedSize(horizontal: false, vertical: true)
         }
     }
+}
+
+private enum ApplyNotice: Equatable {
+    case success(String)
+    case failure(String)
 }
 
 private extension SidecarState {

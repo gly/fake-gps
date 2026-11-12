@@ -3,6 +3,15 @@
 All notable changes to this project are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.5.0] - 2026-11-11
+
+### Fixed
+- 修复中国大陆的位置偏移：地图选中点是 GCJ-02 火星坐标，而模拟定位按
+  WGS-84 原始坐标注入，直接下发会偏移几百米。「立即更新」现在自动换算。
+
+### Added
+- 新增「火星坐标纠偏（中国大陆）」开关（默认开启，境外位置自动跳过）。
+
 ## [0.4.0] - 2026-11-11
 
 ### Added
@@ -53,6 +62,7 @@ All notable changes to this project are documented here. The format is based on
   bundled inside the app — no Python install required.
 - One-click tunnel daemon launch and packaged, double-clickable `FakeGPS.app`.
 
+[0.5.0]: https://github.com/gly/fake-gps/releases/tag/v0.5.0
 [0.4.0]: https://github.com/gly/fake-gps/releases/tag/v0.4.0
 [0.3.0]: https://github.com/orestislef/ios-fake-gps/releases/tag/v0.3.0
 [0.2.0]: https://github.com/orestislef/ios-fake-gps/releases/tag/v0.2.0

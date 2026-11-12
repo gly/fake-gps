@@ -74,7 +74,6 @@ struct MapView: NSViewRepresentable {
         private var hasCurrent = false
         private let locationManager = CLLocationManager()
         private var centeredOnUser = false
-        private var lastUserLocation: CLLocation?
 
         init(_ parent: MapView) {
             self.parent = parent
@@ -101,22 +100,6 @@ struct MapView: NSViewRepresentable {
                 map.setRegion(region, animated: true)
             }
             controller.currentCenter = { [weak self] in self?.mapView?.region.center }
-            // 「回到当前位置」按钮：居中到最新定位；还没有定位时重新发起定位请求。
-            controller.locateUser = { [weak self] in
-                guard let self, let map = self.mapView else { return }
-                if let loc = self.lastUserLocation {
-                    map.setRegion(
-                        MKCoordinateRegion(
-                            center: loc.coordinate,
-                            latitudinalMeters: 2_000,
-                            longitudinalMeters: 2_000
-                        ),
-                        animated: true
-                    )
-                } else {
-                    self.startLocation()
-                }
-            }
         }
 
         @objc func handleClick(_ gr: NSClickGestureRecognizer) {
@@ -139,7 +122,6 @@ struct MapView: NSViewRepresentable {
 
         func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
             guard let map = mapView, let loc = locations.last else { return }
-            lastUserLocation = loc
             map.showsUserLocation = true
             guard !centeredOnUser else { return }
             centeredOnUser = true

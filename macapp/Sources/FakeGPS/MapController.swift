@@ -10,7 +10,6 @@ final class MapController: ObservableObject {
     var recenter: ((CLLocationCoordinate2D, CLLocationDistance) -> Void)?
     var zoomBy: ((Double) -> Void)?
     var currentCenter: (() -> CLLocationCoordinate2D?)?
-    var locateUser: (() -> Void)?
 
     func center(on coord: CLLocationCoordinate2D, meters: CLLocationDistance = 1_500) {
         recenter?(coord, meters)
@@ -18,9 +17,6 @@ final class MapController: ObservableObject {
 
     func zoomIn() { zoomBy?(0.5) }
     func zoomOut() { zoomBy?(2.0) }
-
-    /// 回到 Mac 当前位置（由 MapView 的 coordinator 实现）。
-    func locateCurrentLocation() { locateUser?() }
 }
 
 /// Address / place search backed by MapKit's local search.

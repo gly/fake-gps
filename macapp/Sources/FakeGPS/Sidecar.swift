@@ -65,6 +65,8 @@ enum SidecarState: Equatable {
 final class Sidecar: ObservableObject {
     @Published private(set) var state: SidecarState = .stopped
     @Published private(set) var lastError: String?
+    /// ID of the most recent command the device acknowledged with `ok`.
+    @Published private(set) var lastAcknowledgedID: Int?
 
     /// Executable to launch and the leading args (e.g. the frozen runtime with
     /// ["sidecar"], or python with [scriptPath]).
@@ -189,14 +191,20 @@ final class Sidecar: ObservableObject {
 
     // MARK: - Commands
 
-    func setLocation(_ lat: Double, _ lon: Double) {
+    /// Send a coordinate to the device. Returns the command ID to match against
+    /// `lastAcknowledgedID`, or nil if the helper isn't running.
+    @discardableResult
+    func setLocation(_ lat: Double, _ lon: Double) -> Int? {
         messageID += 1
-        send(["cmd": "set", "lat": lat, "lon": lon, "id": messageID])
+        let id = messageID
+        return send(["cmd": "set", "lat": lat, "lon": lon, "id": id]) ? id : nil
     }
 
-    func clearLocation() {
+    @discardableResult
+    func clearLocation() -> Int? {
         messageID += 1
-        send(["cmd": "clear", "id": messageID])
+        let id = messageID
+        return send(["cmd": "clear", "id": id]) ? id : nil
     }
 
     /// Send a JSON command to the sidecar over stdin. Returns `true` if the
@@ -229,7 +237,9 @@ final class Sidecar: ObservableObject {
               let event = obj["event"] as? String else { return }
 
         switch event {
-        case "ready":
+        case "ready", "reconnected":
+            // A (re)established device connection clears any stale error text.
+            lastError = nil
             if let devObj = obj["device"],
                let devData = try? JSONSerialization.data(withJSONObject: devObj),
                let dev = try? JSONDecoder().decode(DeviceInfo.self, from: devData) {
@@ -243,7 +253,13 @@ final class Sidecar: ObservableObject {
             if (obj["fatal"] as? Bool) == true {
                 state = .failed(msg)
             }
-        case "ok", "pong", "devices", "bye":
+        case "ok":
+            if let id = obj["id"] as? Int {
+                lastAcknowledgedID = id
+                // The link is healthy again; drop any transient reconnect text.
+                lastError = nil
+            }
+        case "pong", "devices", "bye":
             break
         default:
             break

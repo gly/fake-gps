@@ -29,16 +29,21 @@ final class SimulationEngine: ObservableObject {
     @Published var speedKmh: Double = 50      // target ground speed
     @Published var loop: Bool = false
     @Published var jitterMetres: Double = 0   // 0 = perfectly smooth
-    /// 开启后，每次传送会在选中位置 100 米范围内随机取一个点。
+    /// 开启后，每次点「立即更新」会在选中位置 100 米范围内随机取一个点。
     @Published var randomOffset: Bool = false
     /// 随机偏移半径（米）。
     static let randomRadiusMetres: Double = 100
+    /// 火星坐标纠偏：中国大陆地图显示的是 GCJ-02 坐标，模拟定位按
+    /// WGS-84 原始坐标注入；开启后自动换算，消除几百米偏移。境外自动跳过。
+    @Published var marsCorrection: Bool = true
 
     @Published private(set) var playback: PlaybackState = .idle
     /// 地图 / 搜索选中的待应用位置（尚未发送到设备）。
     @Published private(set) var selectedCoordinate: CLLocationCoordinate2D?
     /// 已应用到设备的位置。
     @Published private(set) var currentCoordinate: CLLocationCoordinate2D?
+    /// 最近一次「立即更新」随机取到的点；未开启随机或尚未应用时为 nil。
+    @Published private(set) var appliedRandomCoordinate: CLLocationCoordinate2D?
     @Published private(set) var progress: Double = 0 // 0...1 along the route
 
     private let sidecar: Sidecar
@@ -85,23 +90,46 @@ final class SimulationEngine: ObservableObject {
     // MARK: - 选择与应用
 
     /// 地图点击 / 搜索选择位置（只记录，不更新设备）。
-    /// 开启随机偏移时，在点击位置周围 100 米内随机取点（圆内均匀分布），
-    /// 地图上看到的就是最终会应用的坐标。
+    /// 开启随机偏移时，随机发生在点「立即更新」时，围绕这里选中的位置取点。
     func select(_ c: CLLocationCoordinate2D) {
-        let target = randomOffset
-            ? Geo.randomOffset(c, radius: Self.randomRadiusMetres)
-            : c
-        selectedCoordinate = target
+        selectedCoordinate = c
+        appliedRandomCoordinate = nil
     }
 
     /// 「立即更新」：把当前选中的位置应用到设备，并持久化供下次启动默认使用。
-    func applySelected() {
-        guard let c = selectedCoordinate, sidecar.state.isReady else { return }
-        currentCoordinate = c
-        sidecar.setLocation(c.latitude, c.longitude)
+    /// 开启随机偏移时，这一刻才在选中位置周围随机取点，结果由
+    /// `appliedRandomCoordinate` 公布给界面。
+    /// 开启火星坐标纠偏时，中国大陆内的位置会先从 GCJ-02 换算成
+    /// WGS-84 再下发，否则设备上会偏移几百米。
+    /// 返回指令 ID，调用方可据此等待设备的 `ok` 回执；发送失败时返回 nil。
+    @discardableResult
+    func applySelected() -> Int? {
+        guard let anchor = selectedCoordinate, sidecar.state.isReady else { return nil }
+        // 随机偏移在 GCJ 坐标系内进行，与地图显示一致
+        let chosen = randomOffset
+            ? Geo.randomOffset(anchor, radius: Self.randomRadiusMetres)
+            : anchor
+        // 地图选中的是 GCJ-02（火星坐标）；模拟定位按 WGS-84 原始坐标注入，
+        // 需要先换算，否则设备上会偏移几百米。境外位置无需换算。
+        let target = (marsCorrection && !Geo.isOutOfChina(chosen))
+            ? Geo.gcj02ToWgs84(chosen)
+            : chosen
+        guard let id = sidecar.setLocation(target.latitude, target.longitude) else { return nil }
+        currentCoordinate = target
+        appliedRandomCoordinate = randomOffset ? chosen : nil
+        // 持久化保存地图显示坐标（GCJ-02），下次启动标记位置不变。
         let d = UserDefaults.standard
-        d.set(c.latitude, forKey: Prefs.latKey)
-        d.set(c.longitude, forKey: Prefs.lonKey)
+        d.set(chosen.latitude, forKey: Prefs.latKey)
+        d.set(chosen.longitude, forKey: Prefs.lonKey)
+        return id
+    }
+
+    /// 最近一次随机取点与选中位置之间的距离（米）；未随机应用时为 nil。
+    var appliedRandomDistance: Double? {
+        guard let anchor = selectedCoordinate, let random = appliedRandomCoordinate else {
+            return nil
+        }
+        return Geo.distance(anchor, random)
     }
 
     // MARK: - Route playback
