@@ -206,6 +206,7 @@ sudo "/Applications/FakeGPS.app/Contents/Resources/runtime/fakegps-runtime" tunn
 
 ## 许可与使用
 
-基于 [MIT 许可证](LICENSE) 发布。请阅读[免责声明](DISCLAIMER.md)：
-本工具仅用于合法测试和个人用途 —— 不得用于欺诈、规避反作弊/反欺诈系统
-或欺骗第三方。
+基于 [MIT 许可证](LICENSE) 发布（原始项目版权声明已保留）。本项目基于
+[orestislef/ios-fake-gps](https://github.com/orestislef/ios-fake-gps) 二次开发。
+请阅读[免责声明](DISCLAIMER.md)：本工具仅用于合法测试和个人用途 ——
+不得用于欺诈、规避反作弊/反欺诈系统或欺骗第三方。

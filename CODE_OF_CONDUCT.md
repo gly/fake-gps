@@ -27,7 +27,7 @@ Examples of unacceptable behavior:
 
 Instances of abusive or unacceptable behavior may be reported to the maintainer
 privately via the repository's **Security → Report a vulnerability** form or by
-contacting the maintainer through GitHub ([@orestislef](https://github.com/orestislef)).
+contacting the maintainer through GitHub ([@gly](https://github.com/gly)).
 All complaints will be reviewed and investigated promptly and fairly.
 
 ## Attribution

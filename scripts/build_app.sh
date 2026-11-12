@@ -46,7 +46,7 @@ cat > "$APP/Contents/Info.plist" <<PLIST
   <key>CFBundleDisplayName</key><string>iOS Fake GPS</string>
   <key>CFBundleExecutable</key><string>FakeGPS</string>
   <key>CFBundleIconFile</key><string>AppIcon</string>
-  <key>CFBundleIdentifier</key><string>io.github.orestislef.ios-fake-gps</string>
+  <key>CFBundleIdentifier</key><string>com.gly.fakegps</string>
   <key>CFBundlePackageType</key><string>APPL</string>
   <key>CFBundleShortVersionString</key><string>${VERSION}</string>
   <key>CFBundleVersion</key><string>${VERSION}</string>
