@@ -3,6 +3,15 @@
 All notable changes to this project are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.0.0] - 2026-11-12
+
+### Changed
+- 全新 logo：深空蓝雷达准星 + 橙色导航箭头，与旧版图钉设计完全不同。
+- README 按当前业务重写：移除路线回放描述，补充火星坐标纠偏与设备信息。
+- 版权合规：LICENSE 追加 gly 版权行（保留上游 orestislef 声明），
+  Bundle ID 改为 `com.gly.fakegps`，SECURITY / 行为准则联系方式改为 @gly，
+  README 注明基于 orestislef/ios-fake-gps 二次开发。
+
 ## [0.5.0] - 2026-11-11
 
 ### Fixed
@@ -62,6 +71,7 @@ All notable changes to this project are documented here. The format is based on
   bundled inside the app — no Python install required.
 - One-click tunnel daemon launch and packaged, double-clickable `FakeGPS.app`.
 
+[1.0.0]: https://github.com/gly/fake-gps/releases/tag/v1.0.0
 [0.5.0]: https://github.com/gly/fake-gps/releases/tag/v0.5.0
 [0.4.0]: https://github.com/gly/fake-gps/releases/tag/v0.4.0
 [0.3.0]: https://github.com/orestislef/ios-fake-gps/releases/tag/v0.3.0
