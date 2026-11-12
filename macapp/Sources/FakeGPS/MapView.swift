@@ -87,7 +87,8 @@ struct MapView: NSViewRepresentable {
         private let currentAnnotation = MKPointAnnotation()
         private var hasCurrent = false
         private let locationManager = CLLocationManager()
-        private var centeredOnUser = false
+        /// 是否已经完成首次居中（由启动记录或 Mac 定位触发）。
+        var centeredOnUser = false
 
         init(_ parent: MapView) {
             self.parent = parent
