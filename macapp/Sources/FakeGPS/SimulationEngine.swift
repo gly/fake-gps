@@ -52,6 +52,10 @@ final class SimulationEngine: ObservableObject {
     private let tick: TimeInterval = 1.0       // update cadence (s)
     private var jitterSeed: Double = 0
 
+    /// 选中位置的反向地理编码结果（如「广东省 广州市 天河区 XX路」）。
+    @Published private(set) var selectedPlaceName: String?
+    private let geocoder = CLGeocoder()
+
     private enum Prefs {
         static let latKey = "lastAppliedLatitude"
         static let lonKey = "lastAppliedLongitude"
@@ -64,6 +68,7 @@ final class SimulationEngine: ObservableObject {
         if let lat = d.object(forKey: Prefs.latKey) as? Double,
            let lon = d.object(forKey: Prefs.lonKey) as? Double {
             selectedCoordinate = CLLocationCoordinate2D(latitude: lat, longitude: lon)
+            if let restored = selectedCoordinate { reverseGeocode(restored) }
         }
     }
 
@@ -94,6 +99,27 @@ final class SimulationEngine: ObservableObject {
     func select(_ c: CLLocationCoordinate2D) {
         selectedCoordinate = c
         appliedRandomCoordinate = nil
+        reverseGeocode(c)
+    }
+
+    /// 反向地理编码：把选中坐标换成具体位置名，供侧边栏展示。
+    /// 传入的就是地图显示坐标（GCJ-02），与 CLGeocoder 的期望一致。
+    private func reverseGeocode(_ c: CLLocationCoordinate2D) {
+        geocoder.cancelGeocode()
+        selectedPlaceName = nil
+        let location = CLLocation(latitude: c.latitude, longitude: c.longitude)
+        geocoder.reverseGeocodeLocation(location) { [weak self] placemarks, _ in
+            guard let pm = placemarks?.first else { return }
+            var parts: [String] = []
+            if let admin = pm.administrativeArea { parts.append(admin) }
+            if let locality = pm.locality, locality != pm.administrativeArea { parts.append(locality) }
+            if let sub = pm.subLocality { parts.append(sub) }
+            if let name = pm.name { parts.append(name) }
+            let text = parts.joined(separator: " ")
+            Task { @MainActor [weak self] in
+                self?.selectedPlaceName = text.isEmpty ? nil : text
+            }
+        }
     }
 
     /// 「立即更新」：把当前选中的位置应用到设备，并持久化供下次启动默认使用。

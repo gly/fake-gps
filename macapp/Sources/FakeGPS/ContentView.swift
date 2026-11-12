@@ -214,6 +214,14 @@ struct ContentView: View {
                     .font(.caption.monospaced()).foregroundStyle(.secondary)
             }
 
+            if let place = engine.selectedPlaceName {
+                Label(place, systemImage: "mappin.and.ellipse")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(2)
+                    .help(place)
+            }
+
             if let r = engine.appliedRandomCoordinate {
                 Text(
                     String(
