@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """
-Generate the app icon: a white location pin with a route trail on a blue→teal
-rounded-square background. Renders at 4x and downsamples for clean edges, writes
-a 1024px PNG, and builds a full .iconset for `iconutil`.
+Generate the app icon (v2): a bold orange navigation arrow flying over a cyan
+radar crosshair, on a deep-space navy rounded-square background. Renders at 4x
+and downsamples for clean edges, writes a 1024px PNG, a README logo.png, and
+builds a full .iconset for `iconutil`.
 """
 import math
 import os
@@ -35,41 +36,64 @@ def squircle_mask(size, n=5.0):
     return m
 
 
+def rotate(points, cx, cy, deg):
+    """Rotate a list of (x, y) points around (cx, cy) by deg degrees."""
+    rad = math.radians(deg)
+    cos, sin = math.cos(rad), math.sin(rad)
+    return [(cx + (x - cx) * cos - (y - cy) * sin,
+             cy + (x - cx) * sin + (y - cy) * cos) for x, y in points]
+
+
 def render(size):
-    top = (10, 132, 255)      # iOS system blue
-    bottom = (52, 199, 89)    # iOS system green
     img = Image.new("RGBA", (size, size), (0, 0, 0, 0))
     grad = Image.new("RGBA", (size, size))
     gd = ImageDraw.Draw(grad)
+    # Deep-space navy gradient, slightly darker toward the bottom.
+    top, bottom = (30, 41, 89), (12, 16, 38)
     for y in range(size):
         gd.line([(0, y), (size, y)], fill=lerp(top, bottom, y / size) + (255,))
     img.paste(grad, (0, 0), squircle_mask(size))
 
     d = ImageDraw.Draw(img, "RGBA")
-    cx = size / 2
-    head_cy = size * 0.42
+    cx = cy = size / 2.0
 
-    # Two subtle signal pulses hugging the pin — "broadcasting" a spoofed spot.
-    for rr, alpha in [(0.235, 85), (0.300, 45)]:
+    # Two thin cyan crosshair rings.
+    for rr, alpha in [(0.310, 210), (0.420, 110)]:
         R = size * rr
-        width = max(1, int(size * 0.014))
-        d.ellipse([cx - R, head_cy - R, cx + R, head_cy + R],
-                  outline=(255, 255, 255, alpha), width=width)
+        width = max(1, int(size * 0.012))
+        d.ellipse([cx - R, cy - R, cx + R, cy + R],
+                  outline=(34, 211, 238, alpha), width=width)
 
-    # Pin: circular head + tapered tail to a point.
-    head_r = size * 0.165
-    tip_y = size * 0.76
-    white = (255, 255, 255, 255)
-    d.ellipse([cx - head_r, head_cy - head_r, cx + head_r, head_cy + head_r],
-              fill=white)
-    spread = head_r * 0.80
-    d.polygon([(cx - spread, head_cy + head_r * 0.60),
-               (cx + spread, head_cy + head_r * 0.60),
-               (cx, tip_y)], fill=white)
-    # Inner dot, tinted green to echo the live-position marker.
-    hole_r = head_r * 0.46
-    d.ellipse([cx - hole_r, head_cy - hole_r, cx + hole_r, head_cy + hole_r],
-              fill=(52, 199, 89, 255))
+    # Tick marks on the outer ring: N / E / S / W.
+    Rt = size * 0.420
+    tick = size * 0.038
+    width = max(1, int(size * 0.014))
+    for angle in (0, 90, 180, 270):
+        rad = math.radians(angle)
+        x1 = cx + math.cos(rad) * (Rt - tick)
+        y1 = cy + math.sin(rad) * (Rt - tick)
+        x2 = cx + math.cos(rad) * (Rt + tick)
+        y2 = cy + math.sin(rad) * (Rt + tick)
+        d.line([(x1, y1), (x2, y2)], fill=(34, 211, 238, 230), width=width)
+
+    # Bold navigation arrow, pointing to the upper right. Shallow tail notch
+    # (not a deep cursor cut) so it reads as a paper plane / compass needle.
+    r = size * 0.210
+    upright = [
+        (cx, cy - r),                    # tip
+        (cx - r * 0.92, cy + r * 0.80),  # left wing
+        (cx, cy + r * 0.55),             # shallow tail notch
+        (cx + r * 0.92, cy + r * 0.80),  # right wing
+    ]
+    arrow = rotate(upright, cx, cy, 45)  # +45° -> tip points to NE
+    d.polygon(arrow, fill=(251, 146, 60, 255))
+    # Crisp white outline so the arrow pops off the dark background.
+    d.line(list(arrow) + [arrow[0]], fill=(255, 255, 255, 230),
+           width=max(1, int(size * 0.016)), joint="curve")
+    # Small cyan dot in the tail notch — the "live position" marker.
+    dot_r = size * 0.032
+    d.ellipse([cx - dot_r, cy - dot_r, cx + dot_r, cy + dot_r],
+              fill=(34, 211, 238, 255))
     return img
 
 
@@ -78,6 +102,7 @@ def main():
     big = render(BASE * SS)
     base = big.resize((BASE, BASE), Image.LANCZOS)
     base.save(os.path.join(ASSETS, "icon_1024.png"))
+    big.resize((512, 512), Image.LANCZOS).save(os.path.join(ASSETS, "logo.png"))
 
     iconset = os.path.join(ASSETS, "AppIcon.iconset")
     os.makedirs(iconset, exist_ok=True)
@@ -91,6 +116,7 @@ def main():
     for px, name in specs:
         big.resize((px, px), Image.LANCZOS).save(os.path.join(iconset, name))
     print("wrote", os.path.join(ASSETS, "icon_1024.png"))
+    print("wrote", os.path.join(ASSETS, "logo.png"))
     print("wrote", iconset)
 
 
