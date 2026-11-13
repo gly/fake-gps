@@ -64,7 +64,7 @@ jobs:
             | --- | --- |
             | Intel | [FakeGPS-macos-x86_64-macos12.zip](https://github.com/gly/fake-gps/releases/download/${{ github.ref_name }}/FakeGPS-macos-x86_64-macos12.zip) |
 
-            此包基于 `macos-12` 兼容分支构建，部署目标 macOS 12.7（Monterey 最终安全补丁版）。
+            此包基于 `macos-12` 兼容分支构建，部署目标 macOS 12（Monterey，覆盖 12.0–12.7）。
             如果 macOS 提示“来自身份不明的开发者”，请右键应用 → 打开，或运行
             `xattr -dr com.apple.quarantine /Applications/FakeGPS.app`。
 
