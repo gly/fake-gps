@@ -38,7 +38,7 @@ struct ContentView: View {
             }
         }
         .animation(.easeInOut(duration: 0.2), value: sidecar.state.isReady)
-        .onChange(of: sidecar.lastAcknowledgedID) { _, ack in
+        .onChangeCompat(of: sidecar.lastAcknowledgedID) { ack in
             // 只有「立即更新」那一笔设备的回执才算成功；播放路线时的回调忽略。
             guard let ack, ack == pendingApplyID else { return }
             pendingApplyID = nil
@@ -48,10 +48,10 @@ struct ContentView: View {
                 showNotice(.success("已更新设备位置"))
             }
         }
-        .onChange(of: sidecar.state) { _, state in
+        .onChangeCompat(of: sidecar.state) { state in
             if case .failed = state { pendingApplyID = nil }
         }
-        .onChange(of: searchFocused) { _, focused in
+        .onChangeCompat(of: searchFocused) { focused in
             // 从其它应用切回来点击搜索框时，系统可能并未真正激活本应用
             // （macOS 14+ 协作激活会拒绝后台应用的立即激活请求），
             // 光标显示了但键盘事件仍发给之前的应用。
@@ -85,7 +85,7 @@ struct ContentView: View {
                     .textFieldStyle(.plain)
                     .focused($searchFocused)
                     .onSubmit { search.run(near: mapController.currentCenter?()) }
-                    .onChange(of: search.query) { _, _ in search.run(near: mapController.currentCenter?()) }
+                    .onChangeCompat(of: search.query) { _ in search.run(near: mapController.currentCenter?()) }
                 if search.isSearching {
                     ProgressView().controlSize(.small)
                 } else if !search.query.isEmpty {

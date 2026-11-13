@@ -1,15 +1,8 @@
-# 分架构打包：分别在 Apple silicon（arm64）和 Intel（x86_64）runner 上构建。
+# macOS 12 兼容分支（macos-12）专用：只在 Intel runner 上构建 x86_64 包，
+# 部署目标 macOS 12（Monterey）。master 分支的 build.yml 与此不同。
 #
-# PyInstaller 不支持交叉编译，所以引擎必须在对应架构的机器上冻结。
-# 触发方式：手动（workflow_dispatch）或推送 v* 标签。
-# 产物：FakeGPS-macos-arm64.zip / FakeGPS-macos-x86_64.zip（Actions Artifacts）；
-# 推送 v* 标签时还会自动创建 Release 并上传这两个 zip。
-#
-# 说明：GitHub 已退役 macos-13/14 标签；Apple silicon 用 macos-15，
-# Intel 用 macos-15-intel（GitHub 提供的最后一代 Intel 机器）。
-#
-# 注意：Gitee 没有免费的 macOS 云构建机。把仓库镜像到 GitHub 后本 workflow
-# 即可直接使用；或在任意 Intel Mac 上手动运行 ./scripts/build_app.sh。
+# 触发方式：手动（workflow_dispatch，需选择本分支）或在本分支上推送 v* 标签。
+# 产物：FakeGPS-macos-x86_64-macos12.zip（Actions Artifacts / Release）。
 
 name: Build macOS app
 
@@ -20,16 +13,7 @@ on:
 
 jobs:
   build:
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - os: macos-15 # Apple silicon（arm64）
-            arch: arm64
-          - os: macos-15-intel # 最后一代 Intel runner（x86_64）
-            arch: x86_64
-
-    runs-on: ${{ matrix.os }}
+    runs-on: macos-15-intel # 最后一代 Intel runner（x86_64）
     steps:
       - uses: actions/checkout@v4
 
@@ -42,14 +26,17 @@ jobs:
           ./setup.sh
           ~/.ios-fake-gps/venv/bin/pip install pyinstaller
 
-      - name: Build app (${{ matrix.arch }})
+      - name: Build app (x86_64, macOS 12+)
         run: ./scripts/build_app.sh
+
+      - name: Rename zip for macOS 12 legacy tag
+        run: mv dist/FakeGPS-macos-x86_64.zip dist/FakeGPS-macos-x86_64-macos12.zip
 
       - name: Upload zip
         uses: actions/upload-artifact@v4
         with:
-          name: FakeGPS-macos-${{ matrix.arch }}
-          path: dist/FakeGPS-macos-*.zip
+          name: FakeGPS-macos-x86_64-macos12
+          path: dist/FakeGPS-macos-x86_64-macos12.zip
           if-no-files-found: error
 
   release:
@@ -59,36 +46,25 @@ jobs:
     permissions:
       contents: write
     steps:
-      # 按需求：发布新版本前清空所有旧 release（连同对应的 git tag）。
-      - name: Remove previous releases
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          for tag in $(gh release list --repo ${{ github.repository }} \
-                       --json tagName -q '.[].tagName' \
-                       | grep -v "^${{ github.ref_name }}$"); do
-            echo "Deleting old release/tag: $tag"
-            gh release delete "$tag" --repo ${{ github.repository }} --yes --cleanup-tag
-          done
-
       - uses: actions/download-artifact@v4
         with:
-          pattern: FakeGPS-macos-*
+          pattern: FakeGPS-macos-x86_64-macos12
           path: dist
           merge-multiple: true
 
+      # 注意：本分支不清空旧 release（master 的 build.yml 会清理）。
       - uses: softprops/action-gh-release@v2
         with:
-          name: FakeGPS ${{ github.ref_name }}
-          files: dist/FakeGPS-macos-*.zip
+          name: FakeGPS ${{ github.ref_name }} (macOS 12 Intel)
+          files: dist/FakeGPS-macos-x86_64-macos12.zip
           body: |
-            ## 下载
+            ## 下载（Intel 芯片 · macOS 12 Monterey 兼容版）
 
             | 芯片 | 下载 |
             | --- | --- |
-            | Apple silicon（M1/M2/M3/M4） | [FakeGPS-macos-arm64.zip](https://github.com/gly/fake-gps/releases/download/${{ github.ref_name }}/FakeGPS-macos-arm64.zip) |
-            | Intel | [FakeGPS-macos-x86_64.zip](https://github.com/gly/fake-gps/releases/download/${{ github.ref_name }}/FakeGPS-macos-x86_64.zip) |
+            | Intel | [FakeGPS-macos-x86_64-macos12.zip](https://github.com/gly/fake-gps/releases/download/${{ github.ref_name }}/FakeGPS-macos-x86_64-macos12.zip) |
 
+            此包基于 `macos-12` 兼容分支构建，部署目标 macOS 12（Monterey）。
             如果 macOS 提示“来自身份不明的开发者”，请右键应用 → 打开，或运行
             `xattr -dr com.apple.quarantine /Applications/FakeGPS.app`。
 

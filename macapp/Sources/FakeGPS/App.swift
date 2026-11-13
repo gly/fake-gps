@@ -73,6 +73,5 @@ struct FakeGPSApp: App {
                     }
                 }
         }
-        .windowResizability(.contentSize)
     }
 }
