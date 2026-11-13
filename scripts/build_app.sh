@@ -24,8 +24,8 @@ fi
 test -x dist_pyi/fakegps-runtime/fakegps-runtime
 
 echo "==> 2/5  Building the macOS app (release)"
-( cd macapp && swift build -c release >/dev/null )
-SWIFT_BIN="$(cd macapp && swift build -c release --show-bin-path)/FakeGPS"
+( cd macapp && swift build -c release -Xswiftc -target -Xswiftc x86_64-apple-macos12.7 >/dev/null )
+SWIFT_BIN="$(cd macapp && swift build -c release -Xswiftc -target -Xswiftc x86_64-apple-macos12.7 --show-bin-path)/FakeGPS"
 test -x "$SWIFT_BIN"
 
 echo "==> 3/5  Assembling $APP"
@@ -50,7 +50,7 @@ cat > "$APP/Contents/Info.plist" <<PLIST
   <key>CFBundlePackageType</key><string>APPL</string>
   <key>CFBundleShortVersionString</key><string>${VERSION}</string>
   <key>CFBundleVersion</key><string>${VERSION}</string>
-  <key>LSMinimumSystemVersion</key><string>14.0</string>
+  <key>LSMinimumSystemVersion</key><string>12.7</string>
   <key>NSHighResolutionCapable</key><true/>
   <key>NSPrincipalClass</key><string>NSApplication</string>
   <key>NSLocationUsageDescription</key>
