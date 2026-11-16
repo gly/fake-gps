@@ -88,8 +88,39 @@ jobs:
             | --- | --- |
             | Apple silicon（M1/M2/M3/M4） | [FakeGPS-macos-arm64.zip](https://github.com/gly/fake-gps/releases/download/${{ github.ref_name }}/FakeGPS-macos-arm64.zip) |
             | Intel | [FakeGPS-macos-x86_64.zip](https://github.com/gly/fake-gps/releases/download/${{ github.ref_name }}/FakeGPS-macos-x86_64.zip) |
+            | Intel（旧系统，macOS 12 Monterey） | [FakeGPS-macos-x86_64-macos12.zip](https://github.com/gly/fake-gps/releases/download/${{ github.ref_name }}/FakeGPS-macos-x86_64-macos12.zip) |
 
             如果 macOS 提示“来自身份不明的开发者”，请右键应用 → 打开，或运行
             `xattr -dr com.apple.quarantine /Applications/FakeGPS.app`。
 
             **完整更新日志**：https://github.com/gly/fake-gps/commits/${{ github.ref_name }}
+
+      - name: Wait for macos-12 build and attach legacy package
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # 等待 macos-12 分支（由 v1.1.1-macos12 标签触发）出现本次发布后的
+          # 成功构建（最多 25 分钟），然后把兼容包附加到本 Release。
+          MASTER_CREATED=$(gh api "repos/${{ github.repository }}/actions/runs/${{ github.run_id }}" --jq .created_at)
+          RUN_ID=""
+          for i in $(seq 1 50); do
+            LATEST=$(gh run list --repo ${{ github.repository }} \
+              --branch macos-12 --workflow "Build macOS app" --status success \
+              --limit 1 --json databaseId,createdAt \
+              -q '.[0] | (.databaseId | tostring) + " " + .createdAt' || true)
+            RID="${LATEST%% *}"; CREATED="${LATEST#* }"
+            if [ -n "$RID" ] && [[ "$CREATED" > "$MASTER_CREATED" ]]; then
+              RUN_ID="$RID"
+              echo "found macos-12 run: $RUN_ID"
+              break
+            fi
+            sleep 30
+          done
+          if [ -z "$RUN_ID" ]; then
+            echo "macos-12 分支尚无本次发布后的成功构建，跳过附加兼容包"
+            exit 0
+          fi
+          gh run download "$RUN_ID" --repo ${{ github.repository }} \
+            --name FakeGPS-macos-x86_64-macos12 --dir macos12
+          gh release upload "${{ github.ref_name }}" macos12/FakeGPS-macos-x86_64-macos12.zip \
+            --repo ${{ github.repository }} --clobber
