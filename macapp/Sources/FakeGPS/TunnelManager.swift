@@ -9,8 +9,12 @@ import Foundation
 @MainActor
 final class TunnelManager: ObservableObject {
     @Published private(set) var isUp = false
+    /// 已点过「启动隧道」但迟迟未就绪时，展示 tunneld 日志尾部帮助定位原因。
+    @Published private(set) var startFailure: String?
 
     private var pollTimer: Timer?
+    /// 点「启动隧道」后等待隧道就绪的截止时间；到时仍未就绪则展示日志。
+    private var startWaitDeadline: Date?
     /// Returns (executablePath, args) for launching the tunnel daemon.
     let tunneldCommand: () -> (path: String, args: [String])
 
@@ -39,7 +43,23 @@ final class TunnelManager: ObservableObject {
         } catch {
             up = false
         }
-        if up != isUp { isUp = up }
+        if up != isUp {
+            isUp = up
+            if up { startFailure = nil }
+        }
+        // 已发起启动但超过等待期仍未就绪：读取日志尾部，让用户看到失败原因。
+        if !up, let deadline = startWaitDeadline, Date() >= deadline {
+            startFailure = Self.readLogTail()
+        }
+    }
+
+    /// 读取 tunneld 日志尾部（启动失败原因会写在这里）。
+    static func readLogTail(maxLines: Int = 10) -> String? {
+        guard let content = try? String(contentsOfFile: logPath, encoding: .utf8) else {
+            return nil
+        }
+        let tail = content.split(separator: "\n").suffix(maxLines).joined(separator: "\n")
+        return tail.isEmpty ? nil : String(tail.suffix(800))
     }
 
     /// Launch tunneld with administrator privileges. Shows the macOS auth dialog.
@@ -48,6 +68,8 @@ final class TunnelManager: ObservableObject {
 
     func startTunneld() {
         let (path, args) = tunneldCommand()
+        startFailure = nil
+        startWaitDeadline = Date().addingTimeInterval(15)
         let quotedArgs = args.map { Self.shellQuote($0) }.joined(separator: " ")
         // Fully detach the daemon so it survives the privileged osascript session
         // ending. `nohup` fails here ("can't detach from console" — no tty), and

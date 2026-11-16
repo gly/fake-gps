@@ -54,6 +54,14 @@ struct OnboardingView: View {
                         Button("启动隧道（需要管理员）…") { tunnel.startTunneld() }
                             .disabled(!engineReady)
                     }
+                    if let failure = tunnel.startFailure {
+                        Text("隧道启动失败，日志尾部：\n\(failure)")
+                            .font(.caption2.monospaced())
+                            .foregroundStyle(.red)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .lineLimit(8)
+                            .padding(.top, 2)
+                    }
                 }
                 step(
                     n: 4, done: false, isFinal: true,
