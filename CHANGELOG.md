@@ -3,6 +3,14 @@
 All notable changes to this project are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.1.1] - 2026-11-12
+
+### Added
+- Release 页自动附带 Intel / macOS 12（Monterey）兼容包。
+
+### Fixed
+- 隧道启动失败时，引导清单第 3 步自动显示 tunneld 日志尾部，便于自诊断。
+
 ## [1.1.0] - 2026-11-12
 
 ### Added
@@ -84,6 +92,7 @@ All notable changes to this project are documented here. The format is based on
   bundled inside the app — no Python install required.
 - One-click tunnel daemon launch and packaged, double-clickable `FakeGPS.app`.
 
+[1.1.1]: https://github.com/gly/fake-gps/releases/tag/v1.1.1
 [1.1.0]: https://github.com/gly/fake-gps/releases/tag/v1.1.0
 [1.0.0]: https://github.com/gly/fake-gps/releases/tag/v1.0.0
 [0.5.0]: https://github.com/gly/fake-gps/releases/tag/v0.5.0

@@ -1,0 +1,72 @@
+# 把 macos-12 分支 CI 产出的 Intel/Monterey 兼容包，附加到 master 的最新
+# Release（v1.1.0），并更新 Release 说明加入该下载项。
+#
+# 触发：手动（workflow_dispatch）或本文件变更推送到 master 时自动执行。
+# 前提：macos-12 分支上已有一次成功的 "Build macOS app" 运行。
+
+name: Attach macOS 12 package to release
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [master]
+    paths: [".github/workflows/attach-macos12.yml"]
+
+permissions:
+  contents: write
+
+jobs:
+  attach:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Find latest successful macos-12 build
+        id: find
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          RUN_ID=$(gh run list --repo ${{ github.repository }} \
+            --branch macos-12 --workflow "Build macOS app" \
+            --status success --limit 1 --json databaseId \
+            -q '.[0].databaseId')
+          if [ -z "$RUN_ID" ]; then
+            echo "macos-12 分支上没有成功的构建" >&2
+            exit 1
+          fi
+          echo "Using macos-12 run id: $RUN_ID"
+          echo "run_id=$RUN_ID" >> "$GITHUB_OUTPUT"
+
+      - name: Download macos12 package
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh run download "${{ steps.find.outputs.run_id }}" \
+            --repo ${{ github.repository }} \
+            --name FakeGPS-macos-x86_64-macos12 --dir dist
+          ls -la dist
+
+      - name: Upload to release v1.1.0
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release upload v1.1.0 dist/FakeGPS-macos-x86_64-macos12.zip \
+            --repo ${{ github.repository }} --clobber
+
+      - name: Update release notes with the third download
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          cat > notes.md <<'EOF'
+          ## 下载
+
+          | 芯片 | 系统要求 | 下载 |
+          | --- | --- | --- |
+          | Apple silicon（M1/M2/M3/M4） | macOS 14+ | [FakeGPS-macos-arm64.zip](https://github.com/gly/fake-gps/releases/download/v1.1.0/FakeGPS-macos-arm64.zip) |
+          | Intel | macOS 14+ | [FakeGPS-macos-x86_64.zip](https://github.com/gly/fake-gps/releases/download/v1.1.0/FakeGPS-macos-x86_64.zip) |
+          | Intel（旧系统） | macOS 12+ | [FakeGPS-macos-x86_64-macos12.zip](https://github.com/gly/fake-gps/releases/download/v1.1.0/FakeGPS-macos-x86_64-macos12.zip) |
+
+          如果 macOS 提示“来自身份不明的开发者”，请右键应用 → 打开，或运行
+          `xattr -dr com.apple.quarantine /Applications/FakeGPS.app`。
+
+          **完整更新日志**：https://github.com/gly/fake-gps/commits/v1.1.0
+          EOF
+          gh release edit v1.1.0 --repo ${{ github.repository }} --notes-file notes.md

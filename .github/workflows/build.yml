@@ -2,7 +2,9 @@
 # 部署目标 macOS 12（Monterey）。master 分支的 build.yml 与此不同。
 #
 # 触发方式：手动（workflow_dispatch，需选择本分支）或在本分支上推送 v* 标签。
-# 产物：FakeGPS-macos-x86_64-macos12.zip（Actions Artifacts / Release）。
+# 产物：FakeGPS-macos-x86_64-macos12.zip（Actions Artifacts）。
+# 注意：本分支不创建 Release——master 打 v* 标签时，其 release job 会自动
+# 等待本分支构建成功并把兼容包附加进正式 Release。
 
 name: Build macOS app
 
@@ -38,34 +40,3 @@ jobs:
           name: FakeGPS-macos-x86_64-macos12
           path: dist/FakeGPS-macos-x86_64-macos12.zip
           if-no-files-found: error
-
-  release:
-    needs: build
-    if: startsWith(github.ref, 'refs/tags/v')
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    steps:
-      - uses: actions/download-artifact@v4
-        with:
-          pattern: FakeGPS-macos-x86_64-macos12
-          path: dist
-          merge-multiple: true
-
-      # 注意：本分支不清空旧 release（master 的 build.yml 会清理）。
-      - uses: softprops/action-gh-release@v2
-        with:
-          name: FakeGPS ${{ github.ref_name }} (macOS 12 Intel)
-          files: dist/FakeGPS-macos-x86_64-macos12.zip
-          body: |
-            ## 下载（Intel 芯片 · macOS 12 Monterey 兼容版）
-
-            | 芯片 | 下载 |
-            | --- | --- |
-            | Intel | [FakeGPS-macos-x86_64-macos12.zip](https://github.com/gly/fake-gps/releases/download/${{ github.ref_name }}/FakeGPS-macos-x86_64-macos12.zip) |
-
-            此包基于 `macos-12` 兼容分支构建，部署目标 macOS 12（Monterey，覆盖 12.0–12.7）。
-            如果 macOS 提示“来自身份不明的开发者”，请右键应用 → 打开，或运行
-            `xattr -dr com.apple.quarantine /Applications/FakeGPS.app`。
-
-            **完整更新日志**：https://github.com/gly/fake-gps/commits/${{ github.ref_name }}
