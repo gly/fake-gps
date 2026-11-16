@@ -1,0 +1,90 @@
+# 一次性任务：重建被误删的 v1.1.0 Release。
+# 基于 v1.1.0 对应的代码提交（6989083）在双架构 runner 上重新构建，
+# 并创建 Release「FakeGPS v1.1.0」上传两个 zip。可重复运行（幂等）。
+
+name: Recreate v1.1.0 release
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [master]
+    paths: [".github/workflows/recreate-v110.yml"]
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-15
+            arch: arm64
+          - os: macos-15-intel
+            arch: x86_64
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: 6989083215e88b0a3cfa9e274ca068a76c0717be # v1.1.0 的代码
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Set up Python engine
+        run: |
+          ./setup.sh
+          ~/.ios-fake-gps/venv/bin/pip install pyinstaller
+
+      - name: Build app
+        run: ./scripts/build_app.sh
+
+      - name: Upload zip
+        uses: actions/upload-artifact@v4
+        with:
+          name: FakeGPS-macos-${{ matrix.arch }}
+          path: dist/FakeGPS-macos-*.zip
+          if-no-files-found: error
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: FakeGPS-macos-*
+          path: dist
+          merge-multiple: true
+
+      - name: Create release and upload zips
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          cat > notes.md <<'EOF'
+          ## 下载
+
+          | 芯片 | 下载 |
+          | --- | --- |
+          | Apple silicon（M1/M2/M3/M4） | [FakeGPS-macos-arm64.zip](https://github.com/gly/fake-gps/releases/download/v1.1.0/FakeGPS-macos-arm64.zip) |
+          | Intel | [FakeGPS-macos-x86_64.zip](https://github.com/gly/fake-gps/releases/download/v1.1.0/FakeGPS-macos-x86_64.zip) |
+
+          如果 macOS 提示“来自身份不明的开发者”，请右键应用 → 打开，或运行
+          `xattr -dr com.apple.quarantine /Applications/FakeGPS.app`。
+
+          **完整更新日志**：https://github.com/gly/fake-gps/commits/v1.1.0
+          EOF
+          if gh release view v1.1.0 --repo ${{ github.repository }} >/dev/null 2>&1; then
+            echo "release 已存在，仅覆盖附件"
+            gh release upload v1.1.0 dist/FakeGPS-macos-*.zip \
+              --repo ${{ github.repository }} --clobber
+          else
+            gh release create v1.1.0 dist/FakeGPS-macos-*.zip \
+              --repo ${{ github.repository }} \
+              --target 6989083215e88b0a3cfa9e274ca068a76c0717be \
+              --title "FakeGPS v1.1.0" \
+              --notes-file notes.md
+          fi
