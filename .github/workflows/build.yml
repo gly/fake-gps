@@ -59,6 +59,18 @@ jobs:
     permissions:
       contents: write
     steps:
+      # 按需求：发布新版本前清空所有旧 release（连同对应的 git tag）。
+      - name: Remove previous releases
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          for tag in $(gh release list --repo ${{ github.repository }} \
+                       --json tagName -q '.[].tagName' \
+                       | grep -v "^${{ github.ref_name }}$"); do
+            echo "Deleting old release/tag: $tag"
+            gh release delete "$tag" --repo ${{ github.repository }} --yes --cleanup-tag
+          done
+
       - uses: actions/download-artifact@v4
         with:
           pattern: FakeGPS-macos-*
