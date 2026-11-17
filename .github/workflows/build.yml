@@ -95,32 +95,30 @@ jobs:
 
             **完整更新日志**：https://github.com/gly/fake-gps/commits/${{ github.ref_name }}
 
-      - name: Wait for macos-12 build and attach legacy package
+      - name: Wait for macos-12 artifact and attach legacy package
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # 等待 macos-12 分支（由 v1.1.1-macos12 标签触发）出现本次发布后的
-          # 成功构建（最多 25 分钟），然后把兼容包附加到本 Release。
+          # 等待 macos-12 分支（由 *-macos12 标签触发）产出本次发布后的兼容包
+          # 产物（最多 25 分钟）。注意：标签触发的运行 head_branch 是标签名，
+          # 不能按分支名过滤，改按产物名查询。
           MASTER_CREATED=$(gh api "repos/${{ github.repository }}/actions/runs/${{ github.run_id }}" --jq .created_at)
-          RUN_ID=""
+          AID=""
           for i in $(seq 1 50); do
-            LATEST=$(gh run list --repo ${{ github.repository }} \
-              --branch macos-12 --workflow "Build macOS app" --status success \
-              --limit 1 --json databaseId,createdAt \
-              -q '.[0] | (.databaseId | tostring) + " " + .createdAt' || true)
-            RID="${LATEST%% *}"; CREATED="${LATEST#* }"
-            if [ -n "$RID" ] && [[ "$CREATED" > "$MASTER_CREATED" ]]; then
-              RUN_ID="$RID"
-              echo "found macos-12 run: $RUN_ID"
+            AID=$(gh api "repos/${{ github.repository }}/actions/artifacts?name=FakeGPS-macos-x86_64-macos12" \
+              --jq '.artifacts | map(select(.expired == false))[0].id // empty' || true)
+            if [ -n "$AID" ]; then
+              echo "found artifact: $AID"
               break
             fi
             sleep 30
           done
-          if [ -z "$RUN_ID" ]; then
-            echo "macos-12 分支尚无本次发布后的成功构建，跳过附加兼容包"
+          if [ -z "$AID" ]; then
+            echo "未找到 macOS 12 兼容包产物，跳过附加"
             exit 0
           fi
-          gh run download "$RUN_ID" --repo ${{ github.repository }} \
-            --name FakeGPS-macos-x86_64-macos12 --dir macos12
+          mkdir -p macos12
+          gh api "repos/${{ github.repository }}/actions/artifacts/$AID/zip" > macos12/artifact.zip
+          unzip -o macos12/artifact.zip -d macos12
           gh release upload "${{ github.ref_name }}" macos12/FakeGPS-macos-x86_64-macos12.zip \
             --repo ${{ github.repository }} --clobber
