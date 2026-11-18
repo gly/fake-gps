@@ -5,6 +5,7 @@
 # 最新的未过期产物，用产物 ID 下载后上传到 Release。
 #
 # 触发：手动（workflow_dispatch）或本文件变更推送到 master 时自动执行。
+# v1.1.1 修复记录：cryptography 50.x 无 Intel wheel，macos-12 分支锁定 46.0.7。
 
 name: Attach macOS 12 package to release
 
