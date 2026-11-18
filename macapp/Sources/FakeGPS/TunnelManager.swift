@@ -53,13 +53,14 @@ final class TunnelManager: ObservableObject {
         }
     }
 
-    /// 读取 tunneld 日志尾部（启动失败原因会写在这里）。
-    static func readLogTail(maxLines: Int = 10) -> String? {
+    /// 读取 tunneld 日志尾部（启动失败原因会写在这里）。保留足够多的行，
+    /// 确保 Python Traceback 的最终报错行不被截断。
+    static func readLogTail(maxLines: Int = 40) -> String? {
         guard let content = try? String(contentsOfFile: logPath, encoding: .utf8) else {
             return nil
         }
         let tail = content.split(separator: "\n").suffix(maxLines).joined(separator: "\n")
-        return tail.isEmpty ? nil : String(tail.suffix(800))
+        return tail.isEmpty ? nil : String(tail.suffix(4000))
     }
 
     /// Launch tunneld with administrator privileges. Shows the macOS auth dialog.

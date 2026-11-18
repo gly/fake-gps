@@ -1,1 +1,4 @@
 pymobiledevice3==9.21.0
+# cryptography 47+ 不再提供 Intel macos wheel（仅 arm64），在 macOS 12 上
+# 加载 _rust 会失败。锁定最后一个支持 Intel 的 universal2 版本。
+cryptography==46.0.7
